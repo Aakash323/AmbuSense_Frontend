@@ -1,0 +1,542 @@
+﻿"use client";
+
+import {
+  Ambulance,
+  CheckCircle2,
+  Clock3,
+  Eye,
+  FileImage,
+  MapPin,
+  Phone,
+  ShieldCheck,
+  Trash2,
+  UserRound,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useDrivers, useVerifyDriver } from "@/hooks/use-drivers";
+import { getApiErrorMessage } from "@/lib/api";
+import type { AdminDriver } from "@/types/drivers";
+
+function resolveMediaUrl(url: string | null | undefined) {
+  if (!url) {
+    return null;
+  }
+
+  if (url.startsWith("http")) {
+    return url;
+  }
+
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4008/api";
+  const origin = apiBaseUrl.replace(/\/api\/?$/, "");
+
+  return `${origin}${url}`;
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+function formatDate(value: string | undefined) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function getDriverStatus(driver: AdminDriver) {
+  if (driver.isVerified) {
+    return {
+      label: "Verified",
+      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      Icon: CheckCircle2,
+    };
+  }
+
+  if (driver.documentImageId && driver.verificationNote) {
+    return {
+      label: "Rejected",
+      className: "border-rose-200 bg-rose-50 text-rose-700",
+      Icon: XCircle,
+    };
+  }
+
+  if (driver.documentImageId) {
+    return {
+      label: "Pending",
+      className: "border-amber-200 bg-amber-50 text-amber-700",
+      Icon: Clock3,
+    };
+  }
+
+  return {
+    label: "Not Uploaded",
+    className: "border-slate-200 bg-slate-50 text-slate-700",
+    Icon: FileImage,
+  };
+}
+
+function getAmbulanceStatusClass(status: string | undefined) {
+  switch (status) {
+    case "available":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "assigned":
+    case "en-route":
+    case "at-patient":
+    case "transporting":
+    case "at-hospital":
+      return "border-sky-200 bg-sky-50 text-sky-700";
+    case "completed":
+      return "border-violet-200 bg-violet-50 text-violet-700";
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700";
+  }
+}
+
+function formatStatusLabel(value: string | undefined) {
+  if (!value) {
+    return "Not assigned";
+  }
+
+  return value
+    .split("-")
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export default function AdminDriversPage() {
+  const { data, isLoading, isError, error } = useDrivers();
+  const verifyDriver = useVerifyDriver();
+  const [selectedDriver, setSelectedDriver] = useState<AdminDriver | null>(
+    null,
+  );
+  const drivers = data ?? [];
+
+  async function handleVerify(driverId: string, isVerified: boolean) {
+    try {
+      await verifyDriver.mutateAsync({
+        driverId,
+        payload: {
+          isVerified,
+          verificationNote: isVerified ? undefined : "Rejected by admin",
+        },
+      });
+      toast.success(isVerified ? "Driver approved" : "Driver rejected");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error));
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <main className="space-y-6 p-4 sm:p-6">
+        <Card>
+          <CardContent className="space-y-3 p-6">
+            <div className="h-4 w-48 rounded bg-muted" />
+            <div className="h-10 rounded bg-muted" />
+            <div className="h-10 rounded bg-muted" />
+            <div className="h-10 rounded bg-muted" />
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="p-4 sm:p-6">
+        <Card className="border-rose-200 bg-rose-50">
+          <CardContent className="p-6">
+            <p className="font-medium text-rose-800">
+              Failed to load drivers
+            </p>
+            <p className="mt-1 text-sm text-rose-700">
+              {getApiErrorMessage(error)}
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
+  return (
+    <main className="space-y-6 p-4 sm:p-6">
+      <section className="rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm">
+        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+          <ShieldCheck className="size-3.5" />
+          Driver management
+        </Badge>
+        <h1 className="mt-4 text-3xl font-semibold tracking-tight">
+          Drivers
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Review driver documents, approve verified drivers, and track
+          verification status from one table.
+        </p>
+      </section>
+
+      <Card className="overflow-hidden bg-white/90">
+        {drivers.length === 0 ? (
+          <CardContent className="flex flex-col items-center justify-center p-10 text-center">
+            <UserRound className="size-10 text-muted-foreground" />
+            <h2 className="mt-4 text-lg font-semibold">No drivers found</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Public driver signups will appear here.
+            </p>
+          </CardContent>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Driver</TableHead>
+                <TableHead>Assigned Ambulance</TableHead>
+                <TableHead>Document Type</TableHead>
+                <TableHead>Verification Status</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {drivers.map((driver) => {
+                const status = getDriverStatus(driver);
+                const StatusIcon = status.Icon;
+
+                return (
+                  <TableRow key={driver.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>{getInitials(driver.user.fullName)}</Avatar>
+                        <div>
+                          <p className="font-medium">
+                            {driver.user.fullName}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {driver.user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {driver.assignedAmbulance ? (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 font-medium">
+                            <Ambulance className="size-4 text-emerald-600" />
+                            {driver.assignedAmbulance.ambulanceCode}
+                          </div>
+                          <Badge
+                            className={getAmbulanceStatusClass(
+                              driver.assignedAmbulance.status,
+                            )}
+                          >
+                            {formatStatusLabel(
+                              driver.assignedAmbulance.status,
+                            )}
+                          </Badge>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Ambulance className="size-4" />
+                          Not assigned
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {driver.documentType ?? "Not uploaded"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={status.className}>
+                        <StatusIcon className="size-3.5" />
+                        {status.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {formatDate(driver.updatedAt ?? driver.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1.5">
+                        <Button
+                          onClick={() => setSelectedDriver(driver)}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          <Eye className="size-3.5" />
+                          View
+                        </Button>
+                        <Button
+                          className="bg-emerald-600 text-white hover:bg-emerald-700"
+                          disabled={
+                            verifyDriver.isPending || !driver.documentImageId
+                          }
+                          onClick={() => handleVerify(driver.id, true)}
+                          size="icon-sm"
+                          title="Approve"
+                          type="button"
+                        >
+                          <CheckCircle2 className="size-3.5" />
+                        </Button>
+                        <Button
+                          disabled={verifyDriver.isPending}
+                          onClick={() => handleVerify(driver.id, false)}
+                          size="icon-sm"
+                          title="Reject"
+                          type="button"
+                          variant="destructive"
+                        >
+                          <XCircle className="size-3.5" />
+                        </Button>
+                        <Button
+                          disabled
+                          size="icon-sm"
+                          title="Delete unavailable until backend endpoint is added"
+                          type="button"
+                          variant="ghost"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+            </Table>
+          </div>
+        )}
+      </Card>
+
+      <DriverDetailsDialog
+        driver={selectedDriver}
+        isMutating={verifyDriver.isPending}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedDriver(null);
+          }
+        }}
+        onVerify={handleVerify}
+      />
+    </main>
+  );
+}
+
+function DriverDetailsDialog({
+  driver,
+  isMutating,
+  onOpenChange,
+  onVerify,
+}: {
+  driver: AdminDriver | null;
+  isMutating: boolean;
+  onOpenChange: (open: boolean) => void;
+  onVerify: (driverId: string, isVerified: boolean) => void;
+}) {
+  if (!driver) {
+    return null;
+  }
+
+  const status = getDriverStatus(driver);
+  const StatusIcon = status.Icon;
+  const previewUrl = resolveMediaUrl(driver.documentImage?.url);
+
+  return (
+    <Dialog open={!!driver} onOpenChange={onOpenChange}>
+      <DialogClose onClick={() => onOpenChange(false)} />
+      <DialogHeader>
+        <div className="flex items-start gap-3 pr-10">
+          <Avatar>{getInitials(driver.user.fullName)}</Avatar>
+          <div>
+            <h2 className="text-xl font-semibold">{driver.user.fullName}</h2>
+            <p className="text-sm text-muted-foreground">
+              {driver.user.email} · {driver.user.phone}
+            </p>
+          </div>
+        </div>
+      </DialogHeader>
+      <DialogContent className="space-y-5">
+        <div className="grid gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">
+              Assigned Ambulance
+            </p>
+            <p className="mt-1 text-sm font-medium">
+              {driver.assignedAmbulance?.ambulanceCode ?? "Not assigned"}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">Document</p>
+            <p className="mt-1 text-sm font-medium">
+              {driver.documentType ?? "Not uploaded"}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">Status</p>
+            <Badge className={`mt-1 ${status.className}`}>
+              <StatusIcon className="size-3.5" />
+              {status.label}
+            </Badge>
+          </div>
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">Date</p>
+            <p className="mt-1 text-sm font-medium">
+              {formatDate(driver.updatedAt ?? driver.createdAt)}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border bg-emerald-50/40 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Ambulance className="size-5 text-emerald-700" />
+              <div>
+                <p className="text-sm font-semibold">Assigned ambulance</p>
+                <p className="text-xs text-muted-foreground">
+                  Matched using the driver&apos;s phone number.
+                </p>
+              </div>
+            </div>
+            {driver.assignedAmbulance ? (
+              <Badge
+                className={getAmbulanceStatusClass(
+                  driver.assignedAmbulance.status,
+                )}
+              >
+                {formatStatusLabel(driver.assignedAmbulance.status)}
+              </Badge>
+            ) : null}
+          </div>
+
+          {driver.assignedAmbulance ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">Ambulance code</p>
+                <p className="mt-1 text-sm font-medium">
+                  {driver.assignedAmbulance.ambulanceCode}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">
+                  Ambulance driver
+                </p>
+                <p className="mt-1 text-sm font-medium">
+                  {driver.assignedAmbulance.driverName}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">Ambulance phone</p>
+                <p className="mt-1 flex items-center gap-2 text-sm font-medium">
+                  <Phone className="size-3.5 text-muted-foreground" />
+                  {driver.assignedAmbulance.phone}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-background p-3">
+                <p className="text-xs text-muted-foreground">Active state</p>
+                <p className="mt-1 text-sm font-medium">
+                  {driver.assignedAmbulance.isActive ? "Active" : "Inactive"}
+                </p>
+              </div>
+              {driver.assignedAmbulance.currentLocation ? (
+                <div className="rounded-lg border bg-background p-3 sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">
+                    Current location
+                  </p>
+                  <p className="mt-1 flex items-center gap-2 text-sm font-medium">
+                    <MapPin className="size-3.5 text-muted-foreground" />
+                    {driver.assignedAmbulance.currentLocation.coordinates[1]},{" "}
+                    {driver.assignedAmbulance.currentLocation.coordinates[0]}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-4 rounded-lg border bg-background p-3 text-sm text-muted-foreground">
+              No ambulance is currently linked to this driver. Add or update an
+              ambulance with the same phone number to connect it.
+            </div>
+          )}
+        </div>
+
+        {previewUrl ? (
+          <div className="overflow-hidden rounded-lg border bg-slate-50">
+            <img
+              alt={`${driver.user.fullName} verification document`}
+              className="max-h-[420px] w-full object-contain"
+              src={previewUrl}
+            />
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-4">
+            <FileImage className="size-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">
+                {driver.documentImageId
+                  ? "Document uploaded"
+                  : "No document uploaded"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Raw document IDs are hidden. Preview appears when media URL is
+                available.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {driver.verificationNote ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+            {driver.verificationNote}
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            disabled={isMutating || !driver.documentImageId}
+            onClick={() => onVerify(driver.id, true)}
+          >
+            Approve
+          </Button>
+          <Button
+            disabled={isMutating}
+            onClick={() => onVerify(driver.id, false)}
+            variant="destructive"
+          >
+            Reject
+          </Button>
+          <Button disabled title="TODO: add backend delete driver endpoint">
+            Delete
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
