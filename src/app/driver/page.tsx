@@ -391,6 +391,7 @@ export default function DriverPage() {
                     <div className="space-y-2">
                       <Label htmlFor="documentType">Document type</Label>
                       <select
+                      title="document-type"
                         id="documentType"
                         className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none transition focus-visible:border-emerald-500 focus-visible:ring-3 focus-visible:ring-emerald-500/20"
                         value={documentType}
