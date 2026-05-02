@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
-import { getApiErrorMessage } from "@/lib/api";
+import { getFriendlyApiErrorMessage } from "@/lib/api";
 
 export default function AdminPage() {
   const { data, isLoading, isError, error } = useDashboardSummary();
@@ -43,7 +43,7 @@ export default function AdminPage() {
               Failed to load dashboard summary
             </p>
             <p className="mt-1 text-sm text-rose-700">
-              {getApiErrorMessage(error)}
+              {getFriendlyApiErrorMessage(error)}
             </p>
           </CardContent>
         </Card>
