@@ -721,6 +721,7 @@ function DispatcherDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Dispatch Technique">
                 <select
+                title="Dispatch-Technique"
                   className="h-8 w-full rounded-lg border bg-background px-3 text-sm disabled:opacity-60"
                   onChange={(event) =>
                     onDispatchFormChange({
@@ -741,6 +742,7 @@ function DispatcherDialog({
               </Field>
               <Field label="Ambulance">
                 <select
+                title="Ambulance"
                   className="h-8 w-full rounded-lg border bg-background px-3 text-sm disabled:opacity-60"
                   disabled={isAmbulancesLoading}
                   onChange={(event) =>
@@ -764,6 +766,7 @@ function DispatcherDialog({
               </Field>
               <Field label="Hospital">
                 <select
+                title="Hospital"
                   className="h-8 w-full rounded-lg border bg-background px-3 text-sm disabled:opacity-60"
                   disabled={!requiresHospital || isHospitalsLoading}
                   onChange={(event) =>
