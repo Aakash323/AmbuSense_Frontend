@@ -55,12 +55,12 @@ function DropdownMenu({ trigger, children, side = "bottom" }: DropdownMenuProps)
         <>
           <button
             aria-label="Close menu"
-            className="fixed inset-0 z-10 cursor-default"
+            className="fixed inset-0 z-[1190] cursor-default"
             onClick={() => setOpen(false)}
             type="button"
           />
           <div
-            className="fixed z-20 min-w-40 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
+            className="fixed z-[1200] min-w-40 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
             style={position}
           >
             <DropdownMenuContext.Provider value={{ close: () => setOpen(false) }}>

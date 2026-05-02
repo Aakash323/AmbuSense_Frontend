@@ -1,12 +1,12 @@
 "use client";
 
-import { socket } from "@/lib/socket";
+import { acquireSocketConnection, releaseSocketConnection, socket } from "@/lib/socket";
 
 export default function TestSocketButton() {
   return (
     <button
       onClick={() => {
-        socket.connect();
+        const token = acquireSocketConnection();
 
         const payload = {
           ambulanceId: "69d944de1a2be1cafdb3ba95",
@@ -16,6 +16,7 @@ export default function TestSocketButton() {
 
         console.log("[client] manual emit:", payload);
         socket.emit("ambulance.location.send", payload);
+        window.setTimeout(() => releaseSocketConnection(token), 1000);
       }}
     >
       Send Test Location

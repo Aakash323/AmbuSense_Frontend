@@ -17,12 +17,12 @@ function Dialog({ open, onOpenChange, children }: DialogProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center sm:p-4">
       <div
         className="absolute inset-0"
         onClick={() => onOpenChange(false)}
       />
-      <div className="relative z-10 max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border bg-background shadow-xl">
+      <div className="relative z-10 max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-xl border bg-background shadow-xl">
         {children}
       </div>
     </div>
@@ -46,6 +46,7 @@ function DialogClose({
     <Button
       className={cn("absolute right-4 top-4", className)}
       onClick={onClick}
+      aria-label="Close dialog"
       size="icon"
       type="button"
       variant="ghost"

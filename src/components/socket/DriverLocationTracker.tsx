@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { socket } from "@/lib/socket";
+import { acquireSocketConnection, releaseSocketConnection, socket } from "@/lib/socket";
 
 export default function DriverLocationTracker({
   ambulanceId,
@@ -9,15 +9,18 @@ export default function DriverLocationTracker({
   ambulanceId: string;
 }) {
   useEffect(() => {
-    socket.connect();
+    const token = acquireSocketConnection();
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       console.log("[client] connected:", socket.id);
-    });
+    };
 
-    socket.onAny((event, ...args) => {
+    const handleAnyEvent = (event: string, ...args: unknown[]) => {
       console.log("[client] incoming event:", event, args);
-    });
+    };
+
+    socket.on("connect", handleConnect);
+    socket.onAny(handleAnyEvent);
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
@@ -46,7 +49,9 @@ export default function DriverLocationTracker({
 
     return () => {
       navigator.geolocation.clearWatch(watchId);
-      socket.disconnect();
+      socket.off("connect", handleConnect);
+      socket.offAny(handleAnyEvent);
+      releaseSocketConnection(token);
     };
   }, [ambulanceId]);
 

@@ -1,14 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import type { AdminDriver, VerifyDriverPayload } from "@/types/drivers";
+import type {
+  AdminDriver,
+  DriverFilters,
+  PaginatedDriversResponse,
+  VerifyDriverPayload,
+} from "@/types/drivers";
 
-const driversKey = ["drivers"] as const;
+const driverKeys = {
+  all: ["drivers"] as const,
+  list: (filters: DriverFilters) => ["drivers", filters] as const,
+};
 
-export function useDrivers() {
+export function useDrivers(filters: DriverFilters = {}) {
   return useQuery({
-    queryKey: driversKey,
+    queryKey: driverKeys.list(filters),
     queryFn: async () => {
-      const { data } = await api.get<AdminDriver[]>("/drivers");
+      const { data } = await api.get<PaginatedDriversResponse>("/drivers", {
+        params: filters,
+      });
       return data;
     },
   });
@@ -32,7 +42,7 @@ export function useVerifyDriver() {
       return data;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: driversKey });
+      await queryClient.invalidateQueries({ queryKey: driverKeys.all });
     },
   });
 }
