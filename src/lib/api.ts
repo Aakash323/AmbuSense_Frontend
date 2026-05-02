@@ -10,6 +10,13 @@ export const api = axios.create({
   },
 });
 
+export function isAuthExpiredError(error: unknown) {
+  return (
+    axios.isAxiosError(error) &&
+    (error.response?.status === 401 || error.response?.status === 403)
+  );
+}
+
 export function getApiErrorMessage(error: unknown) {
   if (axios.isAxiosError<ApiErrorResponse>(error)) {
     return (
@@ -24,4 +31,22 @@ export function getApiErrorMessage(error: unknown) {
   }
 
   return "Something went wrong";
+}
+
+export function getFriendlyApiErrorMessage(error: unknown) {
+  if (isAuthExpiredError(error)) {
+    return "Your session has expired. Please sign in again.";
+  }
+
+  const message = getApiErrorMessage(error);
+
+  if (
+    !message ||
+    message === "Network Error" ||
+    message.includes("status code")
+  ) {
+    return "We could not complete that request. Please try again.";
+  }
+
+  return message;
 }

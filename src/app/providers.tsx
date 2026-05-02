@@ -3,6 +3,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
+import { SessionExpiryHandler } from "@/components/auth/session-expiry-handler";
 import { createQueryClient } from "@/lib/query-client";
 
 type ProvidersProps = {
@@ -14,6 +15,7 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <SessionExpiryHandler />
       {children}
       <Toaster richColors closeButton />
     </QueryClientProvider>

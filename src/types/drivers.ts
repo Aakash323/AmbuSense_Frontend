@@ -34,3 +34,19 @@ export type VerifyDriverPayload = {
   isVerified: boolean;
   verificationNote?: string;
 };
+
+export type DriverFilters = {
+  isVerified?: boolean;
+  page?: number;
+  limit?: number;
+};
+
+export type PaginatedDriversResponse = {
+  data: AdminDriver[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
