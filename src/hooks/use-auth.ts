@@ -4,7 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
-import type { AuthMeResponse, LoginPayload, SignupPayload } from "@/types/auth";
+import type {
+  AuthMeResponse,
+  ForgotPasswordPayload,
+  LoginPayload,
+  ResetPasswordPayload,
+  SignupPayload,
+} from "@/types/auth";
 
 const authKeys = {
   me: ["auth", "me"] as const,
@@ -80,6 +86,30 @@ export function useLogout() {
     onSuccess: () => {
       clearAuth();
       queryClient.removeQueries({ queryKey: authKeys.me });
+    },
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async (payload: ForgotPasswordPayload) => {
+      const { data } = await api.post<{ message: string }>(
+        "/auth/forgot-password",
+        payload,
+      );
+      return data;
+    },
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async (payload: ResetPasswordPayload) => {
+      const { data } = await api.post<{ message: string }>(
+        "/auth/reset-password",
+        payload,
+      );
+      return data;
     },
   });
 }

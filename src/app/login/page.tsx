@@ -137,6 +137,15 @@ export default function LoginPage() {
                 </Button>
               </form>
 
+              <div className="mt-4 text-center">
+                <Link
+                  className="text-sm font-medium text-emerald-700 underline-offset-4 hover:underline"
+                  href="/forgot-password"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Need a patient account?{" "}
                 <Link

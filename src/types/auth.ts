@@ -55,3 +55,12 @@ export type SignupPayload = {
   password: string;
   role: "patient" | "driver";
 };
+
+export type ForgotPasswordPayload = {
+  email: string;
+};
+
+export type ResetPasswordPayload = {
+  token: string;
+  newPassword: string;
+};
