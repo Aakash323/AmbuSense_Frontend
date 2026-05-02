@@ -3,22 +3,24 @@
 import {
   Ambulance,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Eye,
   FileImage,
-  MapPin,
   Phone,
   ShieldCheck,
   Trash2,
   UserRound,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { LocationDisplay } from "@/components/location/location-display";
 import {
   Dialog,
   DialogClose,
@@ -34,8 +36,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useDrivers, useVerifyDriver } from "@/hooks/use-drivers";
-import { getApiErrorMessage } from "@/lib/api";
+import { getFriendlyApiErrorMessage } from "@/lib/api";
 import type { AdminDriver } from "@/types/drivers";
+
+const pageSizeOptions = [5, 10, 20] as const;
 
 function resolveMediaUrl(url: string | null | undefined) {
   if (!url) {
@@ -135,12 +139,38 @@ function formatStatusLabel(value: string | undefined) {
 }
 
 export default function AdminDriversPage() {
-  const { data, isLoading, isError, error } = useDrivers();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof pageSizeOptions)[number]>(
+    10,
+  );
+  const filters = useMemo(
+    () => ({
+      page,
+      limit: pageSize,
+    }),
+    [page, pageSize],
+  );
+  const { data, isLoading, isError, error } = useDrivers(filters);
   const verifyDriver = useVerifyDriver();
   const [selectedDriver, setSelectedDriver] = useState<AdminDriver | null>(
     null,
   );
-  const drivers = data ?? [];
+  const drivers = data?.data ?? [];
+  const pagination = data?.meta;
+  const totalItems = pagination?.total ?? 0;
+  const totalPages = pagination?.totalPages ?? 1;
+  const pageStart = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, totalItems);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   async function handleVerify(driverId: string, isVerified: boolean) {
     try {
@@ -153,7 +183,7 @@ export default function AdminDriversPage() {
       });
       toast.success(isVerified ? "Driver approved" : "Driver rejected");
     } catch (error) {
-      toast.error(getApiErrorMessage(error));
+      toast.error(getFriendlyApiErrorMessage(error));
     }
   }
 
@@ -181,7 +211,7 @@ export default function AdminDriversPage() {
               Failed to load drivers
             </p>
             <p className="mt-1 text-sm text-rose-700">
-              {getApiErrorMessage(error)}
+              {getFriendlyApiErrorMessage(error)}
             </p>
           </CardContent>
         </Card>
@@ -332,6 +362,54 @@ export default function AdminDriversPage() {
               })}
             </TableBody>
             </Table>
+            <div className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {pageStart}-{pageEnd} of {totalItems} drivers
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                title="page"
+                  className="h-8 rounded-lg border bg-white px-3 text-sm font-medium shadow-sm"
+                  onChange={(event) =>
+                    setPageSize(
+                      Number(event.target.value) as (typeof pageSizeOptions)[number],
+                    )
+                  }
+                  value={pageSize}
+                >
+                  {pageSizeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  disabled={page <= 1}
+                  onClick={() => setPage((value) => Math.max(1, value - 1))}
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  <ChevronLeft className="size-4" />
+                  Previous
+                </Button>
+                <span className="rounded-lg border bg-white px-3 py-1 text-sm font-medium">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  disabled={page >= totalPages}
+                  onClick={() =>
+                    setPage((value) => Math.min(totalPages, value + 1))
+                  }
+                  size="sm"
+                  type="button"
+                  variant="outline"
+                >
+                  Next
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </Card>
@@ -470,11 +548,14 @@ function DriverDetailsDialog({
                   <p className="text-xs text-muted-foreground">
                     Current location
                   </p>
-                  <p className="mt-1 flex items-center gap-2 text-sm font-medium">
-                    <MapPin className="size-3.5 text-muted-foreground" />
-                    {driver.assignedAmbulance.currentLocation.coordinates[1]},{" "}
-                    {driver.assignedAmbulance.currentLocation.coordinates[0]}
-                  </p>
+                  <div className="mt-1 font-medium">
+                    <LocationDisplay
+                      coordinates={
+                        driver.assignedAmbulance.currentLocation.coordinates
+                      }
+                      label="Ambulance location"
+                    />
+                  </div>
                 </div>
               ) : null}
             </div>

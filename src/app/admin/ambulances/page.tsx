@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   Ambulance as AmbulanceIcon,
   CheckCircle2,
@@ -7,13 +8,13 @@ import {
   ChevronRight,
   Edit3,
   Eye,
-  MapPin,
   MoreHorizontal,
   Plus,
   Search,
   Trash2,
 } from "lucide-react";
 import {
+  Fragment,
   type FormEvent,
   type ReactNode,
   useEffect,
@@ -22,6 +23,8 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { LocationDisplay } from "@/components/location/location-display";
+import { LocationInput } from "@/components/location/location-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -52,7 +55,7 @@ import {
   useUpdateAmbulance,
   useUpdateAmbulanceStatus,
 } from "@/hooks/use-ambulances";
-import { getApiErrorMessage } from "@/lib/api";
+import { getFriendlyApiErrorMessage } from "@/lib/api";
 import {
   ambulanceStatuses,
   type Ambulance,
@@ -61,6 +64,7 @@ import {
 } from "@/types/ambulances";
 
 type DialogMode = "view" | "create" | "edit" | "delete";
+type Coordinates = [number, number];
 
 type AmbulanceFormState = {
   ambulanceCode: string;
@@ -83,6 +87,18 @@ const emptyForm: AmbulanceFormState = {
 };
 
 const pageSizeOptions = [5, 10, 20] as const;
+
+const LocationPreviewMap = dynamic(
+  () => import("@/components/location/location-preview-map.client"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-72 items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground sm:h-80">
+        Loading map...
+      </div>
+    ),
+  },
+);
 
 function getStatusClass(status: AmbulanceStatus) {
   switch (status) {
@@ -111,12 +127,24 @@ function formatStatus(value: string) {
 
 function formatLocation(ambulance: Ambulance) {
   const coordinates = ambulance.currentLocation?.coordinates;
+  return (
+    <LocationDisplay
+      coordinates={coordinates}
+      label="Ambulance location"
+      mapMode="inline"
+      tone="muted"
+    />
+  );
+}
 
-  if (!coordinates) {
-    return "Not available";
-  }
-
-  return `${coordinates[1]}, ${coordinates[0]}`;
+function isValidCoordinates(
+  coordinates: Coordinates | null | undefined,
+): coordinates is Coordinates {
+  return (
+    Array.isArray(coordinates) &&
+    coordinates.length === 2 &&
+    coordinates.every((coordinate) => Number.isFinite(coordinate))
+  );
 }
 
 function getFormFromAmbulance(ambulance: Ambulance): AmbulanceFormState {
@@ -175,6 +203,9 @@ export default function AdminAmbulancesPage() {
   const [pageSize, setPageSize] = useState<(typeof pageSizeOptions)[number]>(
     10,
   );
+  const [expandedMapAmbulanceId, setExpandedMapAmbulanceId] = useState<
+    string | null
+  >(null);
 
   const filters = useMemo<AmbulanceFilters>(
     () => ({
@@ -268,7 +299,7 @@ export default function AdminAmbulancesPage() {
 
       closeDialog();
     } catch (error) {
-      toast.error(getApiErrorMessage(error));
+      toast.error(getFriendlyApiErrorMessage(error));
     }
   }
 
@@ -283,7 +314,7 @@ export default function AdminAmbulancesPage() {
       });
       toast.success("Ambulance status updated");
     } catch (error) {
-      toast.error(getApiErrorMessage(error));
+      toast.error(getFriendlyApiErrorMessage(error));
     }
   }
 
@@ -297,7 +328,7 @@ export default function AdminAmbulancesPage() {
       toast.success("Ambulance deleted");
       closeDialog();
     } catch (error) {
-      toast.error(getApiErrorMessage(error));
+      toast.error(getFriendlyApiErrorMessage(error));
     }
   }
 
@@ -411,7 +442,7 @@ export default function AdminAmbulancesPage() {
                 Failed to load ambulances
               </p>
               <p className="mt-1 text-sm text-rose-700">
-                {getApiErrorMessage(ambulancesQuery.error)}
+                {getFriendlyApiErrorMessage(ambulancesQuery.error)}
               </p>
             </div>
           ) : null}
@@ -445,8 +476,15 @@ export default function AdminAmbulancesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ambulances.map((ambulance) => (
-                      <TableRow key={getAmbulanceId(ambulance)}>
+                  {ambulances.map((ambulance) => {
+                    const ambulanceId = getAmbulanceId(ambulance);
+                    const coordinates = ambulance.currentLocation?.coordinates;
+                    const hasCoordinates = isValidCoordinates(coordinates);
+                    const mapIsOpen = expandedMapAmbulanceId === ambulanceId;
+
+                    return (
+                    <Fragment key={ambulanceId}>
+                      <TableRow>
                       <TableCell className="truncate font-medium">
                         {ambulance.ambulanceCode}
                       </TableCell>
@@ -475,10 +513,28 @@ export default function AdminAmbulancesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="flex items-center gap-2 truncate text-sm">
-                          <MapPin className="size-3.5 text-muted-foreground" />
-                          {formatLocation(ambulance)}
-                        </span>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <LocationDisplay
+                            coordinates={coordinates}
+                            label="Ambulance location"
+                            mapMode="none"
+                            tone="muted"
+                          />
+                          {hasCoordinates ? (
+                            <Button
+                              className="h-7 shrink-0 px-2 text-xs"
+                              onClick={() =>
+                                setExpandedMapAmbulanceId((current) =>
+                                  current === ambulanceId ? null : ambulanceId,
+                                )
+                              }
+                              type="button"
+                              variant="ghost"
+                            >
+                              {mapIsOpen ? "Hide map" : "Map"}
+                            </Button>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu
@@ -523,7 +579,16 @@ export default function AdminAmbulancesPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    {hasCoordinates && mapIsOpen ? (
+                      <TableRow>
+                        <TableCell className="bg-muted/20 p-4" colSpan={7}>
+                          <LocationPreviewMap coordinates={coordinates} />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                    </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
               <div className="flex flex-col gap-3 border-t px-1 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -724,23 +789,19 @@ function AmbulanceDialog({
                   ))}
                 </select>
               </Field>
-              <Field label="Longitude">
-                <Input
-                  onChange={(event) =>
-                    onFormChange({ ...form, longitude: event.target.value })
-                  }
-                  value={form.longitude}
-                />
-              </Field>
-              <Field label="Latitude">
-                <Input
-                  onChange={(event) =>
-                    onFormChange({ ...form, latitude: event.target.value })
-                  }
-                  value={form.latitude}
-                />
-              </Field>
             </div>
+            <LocationInput
+              latitude={form.latitude}
+              longitude={form.longitude}
+              onCoordinatesChange={(coordinates) =>
+                onFormChange({ ...form, ...coordinates })
+              }
+              onLatitudeChange={(latitude) => onFormChange({ ...form, latitude })}
+              onLongitudeChange={(longitude) =>
+                onFormChange({ ...form, longitude })
+              }
+              title="Ambulance location"
+            />
             {mode === "create" ? (
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -781,7 +842,7 @@ function AmbulanceDialog({
         {mode === "delete" && ambulance ? (
           <div className="space-y-4">
             <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-              Delete {ambulance.ambulanceCode}? Are you sure you want to delete this ambulance ?
+              Delete {ambulance.ambulanceCode}? This removes it from the fleet.
             </div>
             <div className="flex justify-end gap-2">
               <Button
@@ -823,11 +884,11 @@ function Field({
   );
 }
 
-function Detail({ label, value }: { label: string; value: string }) {
+function Detail({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+      <div className="mt-1 text-sm font-medium">{value}</div>
     </div>
   );
 }

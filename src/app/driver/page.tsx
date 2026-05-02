@@ -9,25 +9,53 @@ import {
   FileImage,
   FileUp,
   Lock,
+  MapPin,
+  Navigation,
+  Phone,
+  RadioTower,
   Route,
   ShieldAlert,
   ShieldCheck,
   XCircle,
 } from "lucide-react";
-import { useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { TripMap } from "@/components/map/TripMap";
+import { LocationDisplay } from "@/components/location/location-display";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useMe } from "@/hooks/use-auth";
-import { api, getApiErrorMessage } from "@/lib/api";
+import {
+  driverTripKeys,
+  useDriverMyTrip,
+  useUpdateDriverTripStatus,
+} from "@/hooks/use-driver-trip";
+import { api, getFriendlyApiErrorMessage } from "@/lib/api";
+import {
+  acquireSocketConnection,
+  releaseSocketConnection,
+  socket,
+} from "@/lib/socket";
+import type { Ambulance as AmbulanceType } from "@/types/ambulances";
 import type {
   DriverDocumentUploadResponse,
   UploadedMedia,
 } from "@/types/auth";
+import type {
+  EmergencyRequest,
+  EmergencyRequestStatus,
+} from "@/types/emergency-requests";
 
 const documentTypes = [
   "Driving License",
@@ -117,7 +145,518 @@ function resolveMediaUrl(media: UploadedMedia | null) {
   return `${origin}${media.url}`;
 }
 
+const nextStatusByStatus: Partial<
+  Record<EmergencyRequestStatus, EmergencyRequestStatus>
+> = {
+  assigned: "en-route",
+  "en-route": "at-patient",
+  "at-patient": "transporting",
+  transporting: "at-hospital",
+  "at-hospital": "completed",
+};
+
+function formatStatus(value: string | null | undefined) {
+  if (!value) {
+    return "Not assigned";
+  }
+
+  return value
+    .split("-")
+    .map((part) => part[0].toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function getStatusClass(status: EmergencyRequestStatus) {
+  switch (status) {
+    case "pending":
+      return "border-yellow-200 bg-yellow-50 text-yellow-700";
+    case "assigned":
+      return "border-blue-200 bg-blue-50 text-blue-700";
+    case "en-route":
+      return "border-purple-200 bg-purple-50 text-purple-700";
+    case "at-patient":
+      return "border-cyan-200 bg-cyan-50 text-cyan-700";
+    case "transporting":
+      return "border-indigo-200 bg-indigo-50 text-indigo-700";
+    case "at-hospital":
+      return "border-teal-200 bg-teal-50 text-teal-700";
+    case "completed":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    case "cancelled":
+      return "border-rose-200 bg-rose-50 text-rose-700";
+    default:
+      return "border-slate-200 bg-slate-50 text-slate-700";
+  }
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function formatLocation(request: EmergencyRequest) {
+  const coordinates = request.pickupLocation?.coordinates;
+  return (
+    <LocationDisplay
+      coordinates={coordinates}
+      label="Pickup location"
+      tone="muted"
+    />
+  );
+}
+
+function getAmbulanceId(ambulance: AmbulanceType | null | undefined) {
+  return ambulance?.id ?? ambulance?._id ?? "";
+}
+
+function getAmbulanceLabel(ambulance: AmbulanceType | null | undefined) {
+  return ambulance?.ambulanceCode ?? "Not assigned";
+}
+
+function getHospitalLabel(request: EmergencyRequest | null | undefined) {
+  return request?.assignedHospital?.name ?? "Not assigned";
+}
+
+function isTrackableTrip(trip: EmergencyRequest | null | undefined) {
+  return Boolean(
+    trip &&
+      trip.status !== "completed" &&
+      trip.status !== "cancelled" &&
+      getAmbulanceId(trip.assignedAmbulance),
+  );
+}
+
+function DriverTripPanel({
+  isStatusPending,
+  isTrackingActive,
+  lastKnownLocation,
+  onStatusUpdate,
+  queryError,
+  queryIsError,
+  queryIsLoading,
+  trackingMessage,
+  trip,
+}: {
+  isStatusPending: boolean;
+  isTrackingActive: boolean;
+  lastKnownLocation: LastKnownLocation | null;
+  onStatusUpdate: (status: EmergencyRequestStatus) => void;
+  queryError: unknown;
+  queryIsError: boolean;
+  queryIsLoading: boolean;
+  trackingMessage: string;
+  trip: EmergencyRequest | null;
+}) {
+  const nextStatus = trip ? nextStatusByStatus[trip.status] : undefined;
+
+  if (queryIsLoading) {
+    return (
+      <Card id="trip">
+        <CardContent className="space-y-3 p-6">
+          <div className="h-10 rounded bg-muted" />
+          <div className="h-10 rounded bg-muted" />
+          <div className="h-10 rounded bg-muted" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (queryIsError) {
+    return (
+      <Card className="border-rose-200 bg-rose-50" id="trip">
+        <CardContent className="p-6">
+          <p className="font-medium text-rose-800">
+            Failed to load active trip
+          </p>
+          <p className="mt-1 text-sm text-rose-700">
+            {getFriendlyApiErrorMessage(queryError)}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!trip) {
+    return (
+      <Card id="trip">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+              <Route className="size-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">No active trip</h2>
+              <p className="text-sm text-muted-foreground">
+                Assigned emergency trips will appear here automatically.
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+            Live tracking is idle until dispatch assigns an active trip to your
+            ambulance.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6" id="trip">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                <Route className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">My active trip</h2>
+                <p className="text-sm text-muted-foreground">
+                  Current emergency assignment and destination details.
+                </p>
+              </div>
+            </div>
+            <Badge className={getStatusClass(trip.status)}>
+              {formatStatus(trip.status)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          <TripDetail label="Patient" value={trip.patientName} />
+          <TripDetail
+            icon={<Phone className="size-3.5 text-muted-foreground" />}
+            label="Phone"
+            value={trip.patientPhone}
+          />
+          <TripDetail
+            icon={<MapPin className="size-3.5 text-muted-foreground" />}
+            label="Pickup Location"
+            value={formatLocation(trip)}
+          />
+          <TripDetail
+            icon={<Ambulance className="size-3.5 text-muted-foreground" />}
+            label="Ambulance"
+            value={getAmbulanceLabel(trip.assignedAmbulance)}
+          />
+          <TripDetail label="Hospital" value={getHospitalLabel(trip)} />
+          <TripDetail label="Assigned" value={formatDate(trip.assignedAt)} />
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                <CheckCircle2 className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold">Status actions</h2>
+                <p className="text-sm text-muted-foreground">
+                  Advance the trip one lifecycle step at a time.
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {nextStatus ? (
+              <>
+                <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                  <p className="text-muted-foreground">Next status</p>
+                  <p className="mt-1 font-medium">
+                    {formatStatus(trip.status)} to {formatStatus(nextStatus)}
+                  </p>
+                </div>
+                <Button
+                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  disabled={isStatusPending}
+                  onClick={() => onStatusUpdate(nextStatus)}
+                  type="button"
+                >
+                  {isStatusPending
+                    ? "Updating..."
+                    : `Mark ${formatStatus(nextStatus)}`}
+                </Button>
+              </>
+            ) : (
+              <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+                No further status action is available for this trip.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                <RadioTower className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold">Live tracking</h2>
+                <p className="text-sm text-muted-foreground">
+                  Sends your ambulance location while this trip is active.
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Badge
+              className={
+                isTrackingActive
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-amber-200 bg-amber-50 text-amber-700"
+              }
+            >
+              <Navigation className="size-3.5" />
+              {isTrackingActive ? "Live tracking active" : "Tracking idle"}
+            </Badge>
+            <p className="text-sm text-muted-foreground">{trackingMessage}</p>
+            <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+              <p className="text-muted-foreground">Last known location</p>
+              <div className="mt-1 font-medium">
+                <LocationDisplay
+                  coordinates={lastKnownLocation?.coordinates}
+                  label="Ambulance location"
+                />
+              </div>
+              {lastKnownLocation ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Accuracy:{" "}
+                  {lastKnownLocation.accuracy !== null
+                    ? `${Math.round(lastKnownLocation.accuracy)}m`
+                    : "unknown"}{" "}
+                  - {formatDate(lastKnownLocation.timestamp)}
+                </p>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <TripMap trip={trip} />
+    </div>
+  );
+}
+
+function TripDetail({
+  icon,
+  label,
+  value,
+}: {
+  icon?: ReactNode;
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/30 p-4">
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        {icon}
+        {label}
+      </p>
+      <p className="mt-1 break-words font-medium">{value}</p>
+    </div>
+  );
+}
+
+type LastKnownLocation = {
+  coordinates: [number, number];
+  accuracy: number | null;
+  timestamp: string;
+};
+
+export type DriverDashboardMode = "overview" | "verification" | "trip";
+
+function OverviewActionCard({
+  description,
+  href,
+  Icon,
+  title,
+}: {
+  description: string;
+  href: string;
+  Icon: typeof ShieldCheck;
+  title: string;
+}) {
+  return (
+    <Link
+      className="group block rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/50"
+      href={href}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        </div>
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition group-hover:bg-white">
+          <Icon className="size-5" />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function DriverPage() {
+  return <DriverDashboardContent mode="overview" />;
+}
+
+function useDriverTripSocketInvalidation(enabled: boolean) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const token = acquireSocketConnection();
+
+    const invalidateTrip = () => {
+      queryClient.invalidateQueries({ queryKey: driverTripKeys.all });
+    };
+
+    socket.on("emergency.request.updated", invalidateTrip);
+
+    return () => {
+      socket.off("emergency.request.updated", invalidateTrip);
+      releaseSocketConnection(token);
+    };
+  }, [enabled, queryClient]);
+}
+
+function useDriverLiveLocationTracking({
+  isVerified,
+  trip,
+}: {
+  isVerified: boolean;
+  trip: EmergencyRequest | null | undefined;
+}) {
+  const watcherRef = useRef<number | null>(null);
+  const [lastKnownLocation, setLastKnownLocation] =
+    useState<LastKnownLocation | null>(null);
+  const [trackingMessage, setTrackingMessage] = useState(
+    "Live tracking is waiting for an active trip.",
+  );
+  const [isTrackingActive, setIsTrackingActive] = useState(false);
+  const ambulanceId = getAmbulanceId(trip?.assignedAmbulance);
+  const canTrack = isVerified && isTrackableTrip(trip);
+
+  useEffect(() => {
+    function stopWatching(message: string) {
+      if (watcherRef.current !== null) {
+        navigator.geolocation.clearWatch(watcherRef.current);
+        watcherRef.current = null;
+      }
+
+      setIsTrackingActive(false);
+      setTrackingMessage(message);
+    }
+
+    if (!isVerified) {
+      stopWatching("Driver verification is required before live tracking.");
+      return;
+    }
+
+    if (!trip) {
+      stopWatching("Live tracking starts when an active trip is assigned.");
+      return;
+    }
+
+    if (trip.status === "completed" || trip.status === "cancelled") {
+      stopWatching("Live tracking stopped because the trip is closed.");
+      return;
+    }
+
+    if (!ambulanceId) {
+      stopWatching("Live tracking needs an assigned ambulance.");
+      return;
+    }
+
+    if (!("geolocation" in navigator)) {
+      stopWatching("Location tracking is unavailable in this browser.");
+      return;
+    }
+
+    const token = acquireSocketConnection();
+
+    setTrackingMessage("Live tracking active");
+    setIsTrackingActive(true);
+
+    watcherRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const coordinates: [number, number] = [
+          position.coords.longitude,
+          position.coords.latitude,
+        ];
+        const timestamp = new Date(position.timestamp).toISOString();
+
+        setLastKnownLocation({
+          coordinates,
+          accuracy: Number.isFinite(position.coords.accuracy)
+            ? position.coords.accuracy
+            : null,
+          timestamp,
+        });
+        setTrackingMessage("Live tracking active");
+        setIsTrackingActive(true);
+
+        socket.emit("ambulance.location.send", {
+          ambulanceId,
+          coordinates,
+          accuracy: position.coords.accuracy,
+          timestamp,
+        });
+      },
+      (error) => {
+        setIsTrackingActive(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          setTrackingMessage(
+            "Location permission was denied. Enable location access to share live updates.",
+          );
+          return;
+        }
+
+        setTrackingMessage(error.message || "Could not read current location.");
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 10000,
+        timeout: 15000,
+      },
+    );
+
+    return () => {
+      if (watcherRef.current !== null) {
+        navigator.geolocation.clearWatch(watcherRef.current);
+        watcherRef.current = null;
+      }
+      setIsTrackingActive(false);
+      releaseSocketConnection(token);
+    };
+  }, [ambulanceId, canTrack, isVerified, trip]);
+
+  return {
+    isTrackingActive,
+    lastKnownLocation,
+    trackingMessage,
+  };
+}
+
+export function DriverDashboardContent({
+  mode = "overview",
+}: {
+  mode?: DriverDashboardMode;
+}) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
@@ -136,6 +675,15 @@ export default function DriverPage() {
   const copy = verificationCopy(verificationState);
   const isVerified = verificationState === "verified";
   const hasDocument = !!profile?.documentImageId || !!uploadedMedia;
+  useDriverTripSocketInvalidation(isVerified);
+  const myTripQuery = useDriverMyTrip(isVerified);
+  const updateTripStatus = useUpdateDriverTripStatus();
+  const activeTrip = myTripQuery.data ?? null;
+  const { isTrackingActive, lastKnownLocation, trackingMessage } =
+    useDriverLiveLocationTracking({
+      isVerified,
+      trip: activeTrip,
+    });
   const documentMedia = useQuery({
     queryKey: ["uploads", "media", profile?.documentImageId],
     queryFn: async () => {
@@ -149,6 +697,9 @@ export default function DriverPage() {
   const resolvedMedia = uploadedMedia ?? documentMedia.data ?? null;
   const documentPreviewUrl = resolveMediaUrl(resolvedMedia);
   const StatusIcon = copy.Icon;
+  const showOverview = mode === "overview";
+  const showVerification = mode === "verification";
+  const showTrip = mode === "trip";
 
   const uploadDocument = useMutation({
     mutationFn: async (formData: FormData) => {
@@ -173,7 +724,7 @@ export default function DriverPage() {
       await queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
     },
     onError: (error) => {
-      toast.error(getApiErrorMessage(error));
+      toast.error(getFriendlyApiErrorMessage(error));
     },
   });
 
@@ -192,9 +743,18 @@ export default function DriverPage() {
     uploadDocument.mutate(formData);
   }
 
+  async function handleTripStatusUpdate(status: EmergencyRequestStatus) {
+    try {
+      await updateTripStatus.mutateAsync({ status });
+      toast.success(`Trip status updated to ${formatStatus(status)}`);
+    } catch (error) {
+      toast.error(getFriendlyApiErrorMessage(error));
+    }
+  }
+
   if (isLoading) {
     return (
-      <main className="min-h-screen bg-slate-50 p-6">
+      <main className="p-6">
         <div className="mx-auto max-w-5xl">
           <Card>
             <CardContent className="p-6">
@@ -209,7 +769,7 @@ export default function DriverPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_34%),linear-gradient(135deg,#f8fffc_0%,#f1fdf8_42%,#f8fafc_100%)] p-4 sm:p-6">
+    <main className="p-4 sm:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white/90 shadow-sm">
           <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-start sm:justify-between">
@@ -251,9 +811,29 @@ export default function DriverPage() {
           </div>
         </section>
 
+        {showOverview ? (
+          <section className="grid gap-6 md:grid-cols-2">
+            <OverviewActionCard
+              description="Review verification status, uploaded documents, and replacement upload controls."
+              href="/driver/verification"
+              Icon={ShieldCheck}
+              title="Verification"
+            />
+            <OverviewActionCard
+              description="Open active trip details, lifecycle actions, live tracking, and the three-point trip map."
+              href="/driver/trip"
+              Icon={Route}
+              title="Trip controls"
+            />
+          </section>
+        ) : null}
+
+        {!showOverview ? (
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           <div className="space-y-6">
-            <Card>
+            {showVerification ? (
+              <>
+            <Card id="verification">
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -458,45 +1038,50 @@ export default function DriverPage() {
                 </CardContent>
               </Card>
             ) : null}
+              </>
+            ) : null}
 
-            {isVerified ? (
-              <div className="grid gap-6 md:grid-cols-3">
-                <Card>
-                  <CardHeader>
-                    <Ambulance className="size-5 text-emerald-600" />
-                    <h2 className="text-base font-semibold">
-                      Assigned ambulance
-                    </h2>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Ambulance assignment details will appear here.
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <Route className="size-5 text-emerald-600" />
-                    <h2 className="text-base font-semibold">My active trip</h2>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Active emergency trip details will appear here.
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CheckCircle2 className="size-5 text-emerald-600" />
-                    <h2 className="text-base font-semibold">Status actions</h2>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      Trip status update controls will appear here.
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+            {showTrip && isVerified ? (
+              <DriverTripPanel
+                isStatusPending={updateTripStatus.isPending}
+                isTrackingActive={isTrackingActive}
+                lastKnownLocation={lastKnownLocation}
+                onStatusUpdate={handleTripStatusUpdate}
+                queryError={myTripQuery.error}
+                queryIsError={myTripQuery.isError}
+                queryIsLoading={myTripQuery.isLoading}
+                trackingMessage={trackingMessage}
+                trip={activeTrip}
+              />
+            ) : null}
+
+            {showTrip && !isVerified ? (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                      <Lock className="size-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold">
+                        Trip controls locked
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Complete driver verification before active trip tools
+                        and live tracking become available.
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    asChild
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    <Link href="/driver/verification">Go to verification</Link>
+                  </Button>
+                </CardContent>
+              </Card>
             ) : null}
           </div>
 
@@ -517,14 +1102,13 @@ export default function DriverPage() {
                 <p className="font-medium">{data?.user.phone}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Profile ID</p>
-                <p className="break-all font-medium">
-                  {profile?.id ?? "Not available"}
-                </p>
+                <p className="text-muted-foreground">Verification</p>
+                <p className="font-medium">{copy.label}</p>
               </div>
             </CardContent>
           </Card>
         </div>
+        ) : null}
       </div>
     </main>
   );
