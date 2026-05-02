@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   Ambulance,
   Building2,
@@ -80,12 +81,14 @@ export default function AdminPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
           description="All registered ambulance units"
+          href="/admin/ambulances"
           icon={Ambulance}
           title="Total ambulances"
           value={data.ambulances.total}
         />
         <AdminStatCard
           description="Ready for dispatch"
+          href="/admin/ambulances?status=available&active=active"
           icon={CheckCircle2}
           title="Available ambulances"
           tone="emerald"
@@ -93,6 +96,7 @@ export default function AdminPage() {
         />
         <AdminStatCard
           description="Units currently offline"
+          href="/admin/ambulances?status=offline"
           icon={PowerOff}
           title="Offline ambulances"
           tone="rose"
@@ -100,6 +104,7 @@ export default function AdminPage() {
         />
         <AdminStatCard
           description="Hospitals in the network"
+          href="/admin/hospitals"
           icon={Building2}
           title="Hospitals"
           tone="sky"
@@ -110,6 +115,7 @@ export default function AdminPage() {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <AdminStatCard
           description="All emergency requests"
+          href="/admin/requests"
           icon={HeartPulse}
           title="Total requests"
           tone="slate"
@@ -117,6 +123,7 @@ export default function AdminPage() {
         />
         <AdminStatCard
           description="Requests awaiting assignment"
+          href="/admin/requests?status=pending"
           icon={Clock3}
           title="Pending requests"
           tone="amber"
@@ -124,6 +131,7 @@ export default function AdminPage() {
         />
         <AdminStatCard
           description="Requests not completed or cancelled"
+          href="/admin/requests?active=true"
           icon={Route}
           title="Active trips"
           tone="sky"
@@ -131,6 +139,7 @@ export default function AdminPage() {
         />
         <AdminStatCard
           description="Cancelled requests"
+          href="/admin/requests?status=cancelled"
           icon={XCircle}
           title="Cancelled requests"
           tone="rose"
@@ -139,7 +148,12 @@ export default function AdminPage() {
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="bg-white/90">
+        <Link
+          aria-label="Open completed requests"
+          className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/25"
+          href="/admin/requests?status=completed"
+        >
+        <Card className="h-full bg-white/90 transition hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md">
           <CardHeader>
             <h2 className="text-lg font-semibold">Request completion</h2>
             <p className="text-sm text-muted-foreground">
@@ -162,8 +176,14 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
+        </Link>
 
-        <Card className="bg-white/90">
+        <Link
+          aria-label="Open hospital capacity"
+          className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/25"
+          href="/admin/hospitals?status=available&hasAvailableBeds=true"
+        >
+        <Card className="h-full bg-white/90 transition hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md">
           <CardHeader>
             <h2 className="text-lg font-semibold">Hospital capacity</h2>
             <p className="text-sm text-muted-foreground">
@@ -188,6 +208,7 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
+        </Link>
       </section>
     </main>
   );

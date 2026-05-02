@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import {
   Ambulance as AmbulanceIcon,
   CheckCircle2,
@@ -192,9 +193,20 @@ function parseForm(form: AmbulanceFormState) {
 }
 
 export default function AdminAmbulancesPage() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"all" | AmbulanceStatus>("all");
-  const [active, setActive] = useState<"all" | "active" | "inactive">("all");
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status");
+  const initialActive = searchParams.get("active");
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [status, setStatus] = useState<"all" | AmbulanceStatus>(
+    ambulanceStatuses.includes(initialStatus as AmbulanceStatus)
+      ? (initialStatus as AmbulanceStatus)
+      : "all",
+  );
+  const [active, setActive] = useState<"all" | "active" | "inactive">(
+    initialActive === "active" || initialActive === "inactive"
+      ? initialActive
+      : "all",
+  );
   const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
   const [selectedAmbulance, setSelectedAmbulance] =
     useState<Ambulance | null>(null);

@@ -54,6 +54,7 @@ export function useDispatchEmergencyRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: emergencyRequestKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["hospitals"] });
     },
   });
 }
@@ -77,6 +78,7 @@ export function useUpdateEmergencyRequestStatus() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: emergencyRequestKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["hospitals"] });
     },
   });
 }

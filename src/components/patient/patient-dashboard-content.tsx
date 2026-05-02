@@ -446,6 +446,7 @@ export function PatientDashboardContent({
               />
               <Field label="Preferred Hospital">
                 <select
+                title="Hospital"
                   className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none transition focus-visible:border-emerald-500 focus-visible:ring-3 focus-visible:ring-emerald-500/20 disabled:opacity-50"
                   disabled={hospitalsQuery.isLoading}
                   onChange={(event) =>
@@ -882,7 +883,7 @@ function Detail({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+      <div className="mt-1 text-sm font-medium">{value}</div>
     </div>
   );
 }

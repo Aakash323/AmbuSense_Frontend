@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -5,6 +6,7 @@ type AdminStatCardProps = {
   title: string;
   value: number;
   description: string;
+  href?: string;
   icon: LucideIcon;
   tone?: "emerald" | "sky" | "amber" | "rose" | "slate";
 };
@@ -21,11 +23,12 @@ export function AdminStatCard({
   title,
   value,
   description,
+  href,
   icon: Icon,
   tone = "emerald",
 }: AdminStatCardProps) {
-  return (
-    <Card className="bg-white/90">
+  const card = (
+    <Card className="h-full bg-white/90 transition hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -41,5 +44,19 @@ export function AdminStatCard({
         <p className="mt-3 text-sm text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
+  );
+
+  if (!href) {
+    return card;
+  }
+
+  return (
+    <Link
+      aria-label={`Open ${title.toLowerCase()}`}
+      className="block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/25"
+      href={href}
+    >
+      {card}
+    </Link>
   );
 }

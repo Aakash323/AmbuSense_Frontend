@@ -49,6 +49,7 @@ export function useCreateEmergencyRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: myRequestKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["hospitals"] });
     },
   });
 }
@@ -72,6 +73,7 @@ export function useCancelMyRequest() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: myRequestKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["hospitals"] });
     },
   });
 }

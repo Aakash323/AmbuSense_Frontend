@@ -24,6 +24,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { LocationDisplay } from "@/components/location/location-display";
@@ -85,6 +86,13 @@ const emptyDispatchForm: DispatchFormState = {
 };
 
 const pageSizeOptions = [5, 10, 20] as const;
+const activeTripStatuses: EmergencyRequestStatus[] = [
+  "assigned",
+  "en-route",
+  "at-patient",
+  "transporting",
+  "at-hospital",
+];
 
 const nextStatusByStatus: Partial<
   Record<EmergencyRequestStatus, EmergencyRequestStatus>
@@ -184,9 +192,21 @@ function getNextStatus(request: EmergencyRequest) {
 }
 
 export default function AdminRequestsPage() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"all" | EmergencyRequestStatus>("all");
-  const [technique, setTechnique] = useState<"all" | DispatchTechnique>("all");
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status");
+  const initialTechnique = searchParams.get("technique");
+  const showActiveTrips = searchParams.get("active") === "true";
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [status, setStatus] = useState<"all" | EmergencyRequestStatus>(
+    emergencyRequestStatuses.includes(initialStatus as EmergencyRequestStatus)
+      ? (initialStatus as EmergencyRequestStatus)
+      : "all",
+  );
+  const [technique, setTechnique] = useState<"all" | DispatchTechnique>(
+    dispatchTechniques.includes(initialTechnique as DispatchTechnique)
+      ? (initialTechnique as DispatchTechnique)
+      : "all",
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof pageSizeOptions)[number]>(
     10,
@@ -201,11 +221,11 @@ export default function AdminRequestsPage() {
   const requestFilters = useMemo(
     () => ({
       search: search.trim() || undefined,
-      status: status === "all" ? undefined : status,
+      status: showActiveTrips || status === "all" ? undefined : status,
       hospitalAssignmentTechnique:
         technique === "all" ? undefined : technique,
     }),
-    [search, status, technique],
+    [search, showActiveTrips, status, technique],
   );
   const requestsQuery = useEmergencyRequests(requestFilters);
   const dispatchRequest = useDispatchEmergencyRequest();
@@ -228,7 +248,11 @@ export default function AdminRequestsPage() {
   const hospitalsQuery = useHospitals(hospitalFilters);
   const requests = useMemo(
     () =>
-      [...(requestsQuery.data ?? [])].sort((first, second) => {
+      [...(requestsQuery.data ?? [])]
+        .filter((request) =>
+          showActiveTrips ? activeTripStatuses.includes(request.status) : true,
+        )
+        .sort((first, second) => {
         const firstTime = first.createdAt
           ? new Date(first.createdAt).getTime()
           : 0;
@@ -238,7 +262,7 @@ export default function AdminRequestsPage() {
 
         return secondTime - firstTime;
       }),
-    [requestsQuery.data],
+    [requestsQuery.data, showActiveTrips],
   );
   const totalItems = requests.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -996,7 +1020,7 @@ function Detail({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+      <div className="mt-1 text-sm font-medium">{value}</div>
     </div>
   );
 }

@@ -907,7 +907,7 @@ function Detail({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+      <div className="mt-1 text-sm font-medium">{value}</div>
     </div>
   );
 }

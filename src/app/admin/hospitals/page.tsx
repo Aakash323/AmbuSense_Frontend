@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import {
   Bed,
   Building2,
@@ -15,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import {
+  Fragment,
   type FormEvent,
   type ReactNode,
   useEffect,
@@ -62,6 +65,7 @@ import {
 } from "@/types/hospitals";
 
 type DialogMode = "view" | "create" | "edit" | "delete";
+type Coordinates = [number, number];
 
 type HospitalFormState = {
   name: string;
@@ -89,6 +93,18 @@ const emptyForm: HospitalFormState = {
 
 const pageSizeOptions = [5, 10, 20] as const;
 
+const LocationPreviewMap = dynamic(
+  () => import("@/components/location/location-preview-map.client"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-72 items-center justify-center rounded-lg border bg-muted/30 text-sm text-muted-foreground sm:h-80">
+        Loading map...
+      </div>
+    ),
+  },
+);
+
 function getStatusClass(status: HospitalStatus) {
   switch (status) {
     case "available":
@@ -114,6 +130,16 @@ function formatLocation(hospital: Hospital) {
       label="Hospital location"
       tone="muted"
     />
+  );
+}
+
+function isValidCoordinates(
+  coordinates: Coordinates | null | undefined,
+): coordinates is Coordinates {
+  return (
+    Array.isArray(coordinates) &&
+    coordinates.length === 2 &&
+    coordinates.every((coordinate) => Number.isFinite(coordinate))
   );
 }
 
@@ -184,12 +210,22 @@ function parseHospitalForm(form: HospitalFormState) {
 }
 
 export default function AdminHospitalsPage() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"all" | HospitalStatus>("all");
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get("status");
+  const initialHasAvailableBeds = searchParams.get("hasAvailableBeds");
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [status, setStatus] = useState<"all" | HospitalStatus>(
+    hospitalStatuses.includes(initialStatus as HospitalStatus)
+      ? (initialStatus as HospitalStatus)
+      : "all",
+  );
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<(typeof pageSizeOptions)[number]>(
     10,
   );
+  const [expandedMapHospitalId, setExpandedMapHospitalId] = useState<
+    string | null
+  >(null);
   const [dialogMode, setDialogMode] = useState<DialogMode | null>(null);
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(
     null,
@@ -200,10 +236,16 @@ export default function AdminHospitalsPage() {
     () => ({
       search: search.trim() || undefined,
       status: status === "all" ? undefined : status,
+      hasAvailableBeds:
+        initialHasAvailableBeds === "true"
+          ? true
+          : initialHasAvailableBeds === "false"
+            ? false
+            : undefined,
       page,
       limit: pageSize,
     }),
-    [page, pageSize, search, status],
+    [initialHasAvailableBeds, page, pageSize, search, status],
   );
 
   const hospitalsQuery = useHospitals(filters);
@@ -415,8 +457,15 @@ export default function AdminHospitalsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {hospitals.map((hospital) => (
-                    <TableRow key={getHospitalId(hospital)}>
+                  {hospitals.map((hospital) => {
+                    const hospitalId = getHospitalId(hospital);
+                    const coordinates = hospital.location?.coordinates;
+                    const hasCoordinates = isValidCoordinates(coordinates);
+                    const mapIsOpen = expandedMapHospitalId === hospitalId;
+
+                    return (
+                    <Fragment key={hospitalId}>
+                    <TableRow>
                       <TableCell>
                         <div className="min-w-0">
                           <p className="truncate font-medium">
@@ -449,7 +498,29 @@ export default function AdminHospitalsPage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {formatLocation(hospital)}
+                        <div className="flex min-w-0 items-center gap-2">
+                          <LocationDisplay
+                            address={hospital.address}
+                            coordinates={coordinates}
+                            label="Hospital location"
+                            mapMode="none"
+                            tone="muted"
+                          />
+                          {hasCoordinates ? (
+                            <Button
+                              className="h-7 shrink-0 px-2 text-xs"
+                              onClick={() =>
+                                setExpandedMapHospitalId((current) =>
+                                  current === hospitalId ? null : hospitalId,
+                                )
+                              }
+                              type="button"
+                              variant="ghost"
+                            >
+                              {mapIsOpen ? "Hide map" : "Map"}
+                            </Button>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu
@@ -480,7 +551,16 @@ export default function AdminHospitalsPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    {hasCoordinates && mapIsOpen ? (
+                      <TableRow>
+                        <TableCell className="bg-muted/20 p-4" colSpan={6}>
+                          <LocationPreviewMap coordinates={coordinates} />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                    </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
               <div className="flex flex-col gap-3 border-t px-1 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -805,7 +885,7 @@ function Detail({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium">{value}</p>
+      <div className="mt-1 text-sm font-medium">{value}</div>
     </div>
   );
 }
