@@ -6,9 +6,11 @@ import {
   ClipboardList,
   Gauge,
   LogOut,
+  Menu,
   ShieldCheck,
   UserRound,
   Users,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -50,6 +52,9 @@ export function AdminSidebar() {
   const logout = useLogout();
   const { data } = useMe();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= 1024,
+  );
 
   async function handleLogout() {
     try {
@@ -63,12 +68,45 @@ export function AdminSidebar() {
   }
 
   return (
-    <aside className="border-b border-blue-100/80 bg-white/75 backdrop-blur-xl lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:border-b-0 lg:border-r">
+    <>
+      {isExpanded ? (
+        <button
+          aria-label="Collapse sidebar overlay"
+          className="fixed inset-0 z-30 bg-slate-950/20 backdrop-blur-[1px] lg:hidden"
+          onClick={() => setIsExpanded(false)}
+          type="button"
+        />
+      ) : null}
+    <aside
+      className={cn(
+        "fixed inset-y-0 left-0 z-40 h-screen border-r border-blue-100/80 bg-white/75 backdrop-blur-xl transition-[width] duration-200 lg:sticky lg:top-0",
+        isExpanded ? "w-72" : "w-20",
+      )}
+    >
       <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.16),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(244,246,249,0.84)_48%,rgba(255,255,255,0.96)_100%)]">
-        <div className="p-5">
+        <div className="p-3 lg:p-5">
+          <Button
+            aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+            className="mb-3 w-full justify-center border-blue-100 bg-white text-blue-700 hover:bg-blue-50"
+            onClick={() => setIsExpanded((current) => !current)}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {isExpanded ? <X className="size-4" /> : <Menu className="size-4" />}
+            <span className={cn(!isExpanded && "sr-only")}>
+              {isExpanded ? "Collapse" : "Expand"}
+            </span>
+          </Button>
           <div className="rounded-lg border border-blue-100/80 bg-white/90 p-3 shadow-xl shadow-blue-950/5 backdrop-blur">
             <div className="space-y-2">
-              <div className="flex h-32 w-full items-center justify-center overflow-hidden rounded-lg bg-white px-2 ring-1 ring-blue-100">
+              <div
+                className={cn(
+                  "flex w-full items-center justify-center overflow-hidden rounded-lg bg-white px-2 ring-1 ring-blue-100",
+                  isExpanded ? "h-24" : "h-12",
+                  isExpanded ? "lg:h-32" : "lg:h-12",
+                )}
+              >
                 <Image
                   alt="AmbuSense logo"
                   className="h-full w-full object-contain object-center"
@@ -78,14 +116,19 @@ export function AdminSidebar() {
                   width={260}
                 />
               </div>
-              <p className="text-sm font-semibold text-slate-700">
+              <p
+                className={cn(
+                  "text-sm font-semibold text-slate-700 lg:text-base",
+                  !isExpanded && "hidden",
+                )}
+              >
                 Admin Dashboard
               </p>
             </div>
           </div>
         </div>
         <Separator className="bg-blue-100/80" />
-        <nav className="flex gap-2 overflow-x-auto p-3 lg:flex-col lg:overflow-visible">
+        <nav className="flex flex-col gap-2 overflow-y-auto p-3">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive =
@@ -95,12 +138,14 @@ export function AdminSidebar() {
             return (
               <Link
                 className={cn(
-                  "group flex min-w-fit items-center gap-3 rounded-lg border border-transparent px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:border-blue-100 hover:bg-white/75 hover:text-blue-800 hover:shadow-sm",
+                  "group flex min-w-0 items-center gap-2 rounded-lg border border-transparent px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:border-blue-100 hover:bg-white/75 hover:text-blue-800 hover:shadow-sm lg:gap-3",
+                  !isExpanded && "justify-center",
                   isActive &&
                     "border-blue-200 bg-white/95 text-blue-800 shadow-md shadow-blue-950/5 hover:bg-white",
                 )}
                 href={item.href}
                 key={item.href}
+                onClick={() => setIsExpanded(false)}
               >
                 <span
                   className={cn(
@@ -111,14 +156,26 @@ export function AdminSidebar() {
                 >
                   <Icon className="size-4" />
                 </span>
-                <span className="truncate">{item.label}</span>
+                <span
+                  className={cn(
+                    "truncate",
+                    !isExpanded && "hidden",
+                  )}
+                >
+                  {item.label}
+                </span>
               </Link>
             );
           })}
         </nav>
         <div className="mt-auto p-3">
           <Separator className="mb-3 hidden bg-blue-100/80 lg:block" />
-          <div className="mb-3 rounded-lg border border-blue-100/80 bg-white/90 px-3 py-2 shadow-sm backdrop-blur">
+          <div
+            className={cn(
+              "mb-3 rounded-lg border border-blue-100/80 bg-white/90 px-3 py-2 shadow-sm backdrop-blur",
+              !isExpanded && "hidden",
+            )}
+          >
             <div className="flex items-center gap-2">
               <UserRound className="size-4 text-blue-700" />
               <p className="truncate text-sm font-medium text-slate-900">
@@ -130,13 +187,18 @@ export function AdminSidebar() {
             </p>
           </div>
           <Button
-            className="w-full justify-start border-red-100 bg-white text-red-600 hover:bg-red-50 hover:text-red-700"
+            className={cn(
+              "w-full border-red-100 bg-white text-red-600 hover:bg-red-50 hover:text-red-700",
+              isExpanded ? "justify-start" : "justify-center",
+            )}
             onClick={() => setIsLogoutOpen(true)}
             type="button"
             variant="outline"
           >
             <LogOut className="size-4" />
-            Logout
+            <span className={cn(!isExpanded && "sr-only")}>
+              Logout
+            </span>
           </Button>
         </div>
       </div>
@@ -177,5 +239,6 @@ export function AdminSidebar() {
         </DialogContent>
       </Dialog>
     </aside>
+    </>
   );
 }
