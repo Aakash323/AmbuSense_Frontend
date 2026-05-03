@@ -104,15 +104,15 @@ const LocationPreviewMap = dynamic(
 function getStatusClass(status: AmbulanceStatus) {
   switch (status) {
     case "available":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-green-200 bg-green-50 text-green-700";
     case "assigned":
     case "en-route":
     case "at-patient":
     case "transporting":
     case "at-hospital":
-      return "border-sky-200 bg-sky-50 text-sky-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "completed":
-      return "border-violet-200 bg-violet-50 text-violet-700";
+      return "border-green-200 bg-green-50 text-green-700";
     case "offline":
     default:
       return "border-slate-200 bg-slate-50 text-slate-700";
@@ -346,9 +346,9 @@ export default function AdminAmbulancesPage() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-      <section className="flex w-full flex-col gap-4 rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex w-full flex-col gap-4 rounded-lg border border-blue-100/80 bg-white/90 p-6 shadow-xl shadow-blue-950/5 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+          <Badge className="border-blue-200 bg-blue-50 text-blue-700">
             <AmbulanceIcon className="size-3.5" />
             Fleet management
           </Badge>
@@ -361,7 +361,7 @@ export default function AdminAmbulancesPage() {
           </p>
         </div>
         <Button
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          className="bg-blue-600 text-white hover:bg-blue-700"
           onClick={openCreateDialog}
           type="button"
         >
@@ -377,7 +377,7 @@ export default function AdminAmbulancesPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  className="h-10 border-emerald-100 bg-white pl-9 shadow-sm"
+                  className="h-10 border-blue-100 bg-white pl-9 shadow-sm"
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search ambulance code, driver, or phone"
                   value={search}
@@ -388,7 +388,7 @@ export default function AdminAmbulancesPage() {
                   <Button
                     className={
                       active === item
-                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
                         : "bg-white"
                     }
                     key={item}
@@ -449,11 +449,11 @@ export default function AdminAmbulancesPage() {
           ) : null}
 
           {ambulancesQuery.isError ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
-              <p className="font-medium text-rose-800">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="font-medium text-red-800">
                 Failed to load ambulances
               </p>
-              <p className="mt-1 text-sm text-rose-700">
+              <p className="mt-1 text-sm text-red-700">
                 {getFriendlyApiErrorMessage(ambulancesQuery.error)}
               </p>
             </div>
@@ -517,7 +517,7 @@ export default function AdminAmbulancesPage() {
                         <Badge
                           className={
                             ambulance.isActive
-                              ? "w-20 justify-center border-emerald-200 bg-emerald-50 text-emerald-700"
+                              ? "w-20 justify-center border-blue-200 bg-blue-50 text-blue-700"
                               : "w-20 justify-center border-slate-200 bg-slate-50 text-slate-700"
                           }
                         >
@@ -622,7 +622,7 @@ export default function AdminAmbulancesPage() {
                       <DropdownMenuItem
                         className={
                           pageSize === option
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "bg-blue-50 text-blue-700"
                             : undefined
                         }
                         key={option}
@@ -720,7 +720,7 @@ function AmbulanceDialog({
       <DialogClose onClick={onClose} />
       <DialogHeader>
         <div className="flex items-start gap-3 pr-10">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
             <AmbulanceIcon className="size-5" />
           </div>
           <div>
@@ -841,7 +841,7 @@ function AmbulanceDialog({
                 Cancel
               </Button>
               <Button
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                className="bg-blue-600 text-white hover:bg-blue-700"
                 disabled={isMutating}
                 type="submit"
               >
@@ -853,8 +853,8 @@ function AmbulanceDialog({
 
         {mode === "delete" && ambulance ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-              Delete {ambulance.ambulanceCode}? This removes it from the fleet.
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              Delete {ambulance.ambulanceCode}?
             </div>
             <div className="flex justify-end gap-2">
               <Button

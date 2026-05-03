@@ -144,21 +144,21 @@ function formatStatus(value: string | null | undefined) {
 function getStatusClass(status: EmergencyRequestStatus) {
   switch (status) {
     case "pending":
-      return "border-yellow-200 bg-yellow-50 text-yellow-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "assigned":
       return "border-blue-200 bg-blue-50 text-blue-700";
     case "en-route":
-      return "border-purple-200 bg-purple-50 text-purple-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "at-patient":
-      return "border-cyan-200 bg-cyan-50 text-cyan-700";
+      return "border-red-200 bg-red-50 text-red-700";
     case "transporting":
-      return "border-indigo-200 bg-indigo-50 text-indigo-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "at-hospital":
-      return "border-teal-200 bg-teal-50 text-teal-700";
+      return "border-red-200 bg-red-50 text-red-700";
     case "completed":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-green-200 bg-green-50 text-green-700";
     case "cancelled":
-      return "border-rose-200 bg-rose-50 text-rose-700";
+      return "border-red-200 bg-red-50 text-red-700";
     default:
       return "border-slate-200 bg-slate-50 text-slate-700";
   }
@@ -363,8 +363,8 @@ export function PatientDashboardContent({
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-      <section className="rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm">
-        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+      <section className="rounded-lg border border-blue-100/80 bg-white/90 p-6 shadow-xl shadow-blue-950/5 backdrop-blur">
+        <Badge className="border-blue-200 bg-blue-50 text-blue-700">
           <UserRound className="size-3.5" />
           Patient dashboard
         </Badge>
@@ -403,7 +403,7 @@ export function PatientDashboardContent({
 
       <div className="grid min-w-0 gap-6">
         {showCreateForm ? (
-        <Card className="min-w-0 bg-white/90" id="new-request">
+        <Card className="min-w-0 border-blue-100/80 bg-white/90 shadow-lg shadow-blue-950/5" id="new-request">
           <CardContent className="space-y-5 p-5">
             <div>
               <h2 className="text-lg font-semibold">Create emergency request</h2>
@@ -447,7 +447,7 @@ export function PatientDashboardContent({
               <Field label="Preferred Hospital">
                 <select
                 title="Hospital"
-                  className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none transition focus-visible:border-emerald-500 focus-visible:ring-3 focus-visible:ring-emerald-500/20 disabled:opacity-50"
+                  className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none transition focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20 disabled:opacity-50"
                   disabled={hospitalsQuery.isLoading}
                   onChange={(event) =>
                     setForm({ ...form, assignedHospital: event.target.value })
@@ -467,7 +467,7 @@ export function PatientDashboardContent({
               </Field>
               <Field label="Notes">
                 <textarea
-                  className="min-h-24 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none transition placeholder:text-muted-foreground focus-visible:border-emerald-500 focus-visible:ring-3 focus-visible:ring-emerald-500/20"
+                  className="min-h-24 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none transition placeholder:text-muted-foreground focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20"
                   onChange={(event) =>
                     setForm({ ...form, notes: event.target.value })
                   }
@@ -476,7 +476,7 @@ export function PatientDashboardContent({
                 />
               </Field>
               <Button
-                className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                className="w-full bg-blue-600 text-white hover:bg-blue-700"
                 disabled={createRequest.isPending}
                 type="submit"
               >
@@ -489,7 +489,7 @@ export function PatientDashboardContent({
         ) : null}
 
         {showRequests ? (
-        <Card className="min-w-0 bg-white/90" id="my-requests">
+        <Card className="min-w-0 border-blue-100/80 bg-white/90 shadow-lg shadow-blue-950/5" id="my-requests">
           <CardContent className="space-y-4 p-4">
             <div>
               <h2 className="text-lg font-semibold">My Requests</h2>
@@ -507,11 +507,11 @@ export function PatientDashboardContent({
             ) : null}
 
             {myRequestsQuery.isError ? (
-              <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
-                <p className="font-medium text-rose-800">
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                <p className="font-medium text-red-800">
                   Failed to load requests
                 </p>
-                <p className="mt-1 text-sm text-rose-700">
+                <p className="mt-1 text-sm text-red-700">
                   {getFriendlyApiErrorMessage(myRequestsQuery.error)}
                 </p>
               </div>
@@ -648,13 +648,13 @@ function SummaryCard({
   value: number;
 }) {
   return (
-    <Card className="bg-white/90">
+    <Card className="border-blue-100/80 bg-white/90 shadow-lg shadow-blue-950/5">
       <CardContent className="flex items-center justify-between gap-4 p-5">
         <div>
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="mt-2 text-3xl font-semibold tracking-tight">{value}</p>
         </div>
-        <div className="flex size-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+        <div className="flex size-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
           <Icon className="size-5" />
         </div>
       </CardContent>
@@ -675,7 +675,7 @@ function OverviewActionCard({
 }) {
   return (
     <Link
-      className="group block rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/50"
+      className="group block rounded-lg border border-blue-100/80 bg-white/90 p-6 shadow-lg shadow-blue-950/5 transition hover:border-blue-200 hover:bg-white hover:shadow-xl hover:shadow-blue-950/10"
       href={href}
     >
       <div className="flex items-start justify-between gap-4">
@@ -683,7 +683,7 @@ function OverviewActionCard({
           <h2 className="text-lg font-semibold">{title}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{description}</p>
         </div>
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition group-hover:bg-white">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-white">
           <Icon className="size-5" />
         </div>
       </div>
@@ -723,7 +723,7 @@ function PatientDialog({
       <DialogClose onClick={onClose} />
       <DialogHeader>
         <div className="flex items-start gap-3 pr-10">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
             <ClipboardList className="size-5" />
           </div>
           <div>
@@ -773,13 +773,13 @@ function PatientDialog({
 
         {mode === "cancel" ? (
           <form className="space-y-4" onSubmit={onSubmitCancel}>
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
               Cancel this emergency request? Assigned ambulances will be
-              released by the backend.
+              released.
             </div>
             <Field label="Reason">
               <textarea
-                className="min-h-20 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none transition placeholder:text-muted-foreground focus-visible:border-emerald-500 focus-visible:ring-3 focus-visible:ring-emerald-500/20"
+                className="min-h-20 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none transition placeholder:text-muted-foreground focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20"
                 onChange={(event) => onCancelReasonChange(event.target.value)}
                 placeholder="Optional cancellation reason"
                 value={cancelReason}

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   Ambulance,
@@ -35,7 +35,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useDrivers, useVerifyDriver } from "@/hooks/use-drivers";
+import {
+  useDeleteDriver,
+  useDrivers,
+  useVerifyDriver,
+} from "@/hooks/use-drivers";
 import { getFriendlyApiErrorMessage } from "@/lib/api";
 import type { AdminDriver } from "@/types/drivers";
 
@@ -82,7 +86,7 @@ function getDriverStatus(driver: AdminDriver) {
   if (driver.isVerified) {
     return {
       label: "Verified",
-      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      className: "border-green-200 bg-green-50 text-green-700",
       Icon: CheckCircle2,
     };
   }
@@ -90,7 +94,7 @@ function getDriverStatus(driver: AdminDriver) {
   if (driver.documentImageId && driver.verificationNote) {
     return {
       label: "Rejected",
-      className: "border-rose-200 bg-rose-50 text-rose-700",
+      className: "border-red-200 bg-red-50 text-red-700",
       Icon: XCircle,
     };
   }
@@ -113,15 +117,15 @@ function getDriverStatus(driver: AdminDriver) {
 function getAmbulanceStatusClass(status: string | undefined) {
   switch (status) {
     case "available":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-green-200 bg-green-50 text-green-700";
     case "assigned":
     case "en-route":
     case "at-patient":
     case "transporting":
     case "at-hospital":
-      return "border-sky-200 bg-sky-50 text-sky-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "completed":
-      return "border-violet-200 bg-violet-50 text-violet-700";
+      return "border-green-200 bg-green-50 text-green-700";
     default:
       return "border-slate-200 bg-slate-50 text-slate-700";
   }
@@ -152,7 +156,11 @@ export default function AdminDriversPage() {
   );
   const { data, isLoading, isError, error } = useDrivers(filters);
   const verifyDriver = useVerifyDriver();
+  const deleteDriver = useDeleteDriver();
   const [selectedDriver, setSelectedDriver] = useState<AdminDriver | null>(
+    null,
+  );
+  const [driverToDelete, setDriverToDelete] = useState<AdminDriver | null>(
     null,
   );
   const drivers = data?.data ?? [];
@@ -187,6 +195,23 @@ export default function AdminDriversPage() {
     }
   }
 
+  async function handleDeleteDriver() {
+    if (!driverToDelete) {
+      return;
+    }
+
+    try {
+      await deleteDriver.mutateAsync(driverToDelete.id);
+      toast.success("Driver deleted successfully");
+      setDriverToDelete(null);
+      if (selectedDriver?.id === driverToDelete.id) {
+        setSelectedDriver(null);
+      }
+    } catch (error) {
+      toast.error(getFriendlyApiErrorMessage(error));
+    }
+  }
+
   if (isLoading) {
     return (
       <main className="space-y-6 p-4 sm:p-6">
@@ -205,12 +230,12 @@ export default function AdminDriversPage() {
   if (isError) {
     return (
       <main className="p-4 sm:p-6">
-        <Card className="border-rose-200 bg-rose-50">
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="p-6">
-            <p className="font-medium text-rose-800">
+            <p className="font-medium text-red-800">
               Failed to load drivers
             </p>
-            <p className="mt-1 text-sm text-rose-700">
+            <p className="mt-1 text-sm text-red-700">
               {getFriendlyApiErrorMessage(error)}
             </p>
           </CardContent>
@@ -221,8 +246,8 @@ export default function AdminDriversPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6">
-      <section className="rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm">
-        <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+      <section className="rounded-lg border border-blue-100/80 bg-white/90 p-6 shadow-xl shadow-blue-950/5 backdrop-blur">
+        <Badge className="border-blue-200 bg-blue-50 text-blue-700">
           <ShieldCheck className="size-3.5" />
           Driver management
         </Badge>
@@ -281,7 +306,7 @@ export default function AdminDriversPage() {
                       {driver.assignedAmbulance ? (
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 font-medium">
-                            <Ambulance className="size-4 text-emerald-600" />
+                            <Ambulance className="size-4 text-blue-600" />
                             {driver.assignedAmbulance.ambulanceCode}
                           </div>
                           <Badge
@@ -325,7 +350,7 @@ export default function AdminDriversPage() {
                           View
                         </Button>
                         <Button
-                          className="bg-emerald-600 text-white hover:bg-emerald-700"
+                          className="bg-blue-600 text-white hover:bg-blue-700"
                           disabled={
                             verifyDriver.isPending || !driver.documentImageId
                           }
@@ -347,11 +372,12 @@ export default function AdminDriversPage() {
                           <XCircle className="size-3.5" />
                         </Button>
                         <Button
-                          disabled
+                          disabled={deleteDriver.isPending}
+                          onClick={() => setDriverToDelete(driver)}
                           size="icon-sm"
-                          title="Delete unavailable until backend endpoint is added"
+                          title="Delete driver"
                           type="button"
-                          variant="ghost"
+                          variant="destructive"
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -423,6 +449,17 @@ export default function AdminDriversPage() {
           }
         }}
         onVerify={handleVerify}
+        onDelete={setDriverToDelete}
+      />
+      <DeleteDriverDialog
+        driver={driverToDelete}
+        isDeleting={deleteDriver.isPending}
+        onConfirm={handleDeleteDriver}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDriverToDelete(null);
+          }
+        }}
       />
     </main>
   );
@@ -432,10 +469,12 @@ function DriverDetailsDialog({
   driver,
   isMutating,
   onOpenChange,
+  onDelete,
   onVerify,
 }: {
   driver: AdminDriver | null;
   isMutating: boolean;
+  onDelete: (driver: AdminDriver) => void;
   onOpenChange: (open: boolean) => void;
   onVerify: (driverId: string, isVerified: boolean) => void;
 }) {
@@ -456,7 +495,7 @@ function DriverDetailsDialog({
           <div>
             <h2 className="text-xl font-semibold">{driver.user.fullName}</h2>
             <p className="text-sm text-muted-foreground">
-              {driver.user.email} · {driver.user.phone}
+              {driver.user.email} � {driver.user.phone}
             </p>
           </div>
         </div>
@@ -492,10 +531,10 @@ function DriverDetailsDialog({
           </div>
         </div>
 
-        <div className="rounded-xl border bg-emerald-50/40 p-4">
+        <div className="rounded-xl border bg-blue-50/40 p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Ambulance className="size-5 text-emerald-700" />
+              <Ambulance className="size-5 text-blue-700" />
               <div>
                 <p className="text-sm font-semibold">Assigned ambulance</p>
                 <p className="text-xs text-muted-foreground">
@@ -593,14 +632,14 @@ function DriverDetailsDialog({
         )}
 
         {driver.verificationNote ? (
-          <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             {driver.verificationNote}
           </div>
         ) : null}
 
         <div className="flex flex-wrap justify-end gap-2">
           <Button
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            className="bg-blue-600 text-white hover:bg-blue-700"
             disabled={isMutating || !driver.documentImageId}
             onClick={() => onVerify(driver.id, true)}
           >
@@ -613,8 +652,71 @@ function DriverDetailsDialog({
           >
             Reject
           </Button>
-          <Button disabled title="TODO: add backend delete driver endpoint">
+          <Button
+            onClick={() => onDelete(driver)}
+            type="button"
+            variant="destructive"
+          >
             Delete
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteDriverDialog({
+  driver,
+  isDeleting,
+  onConfirm,
+  onOpenChange,
+}: {
+  driver: AdminDriver | null;
+  isDeleting: boolean;
+  onConfirm: () => void;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!driver) {
+    return null;
+  }
+
+  return (
+    <Dialog open={!!driver} onOpenChange={onOpenChange}>
+      <DialogClose onClick={() => onOpenChange(false)} />
+      <DialogHeader>
+        <div className="flex items-start gap-3 pr-10">
+          <div className="flex size-12 items-center justify-center rounded-xl bg-red-50 text-red-600">
+            <Trash2 className="size-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold">Delete driver?</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              This will remove {driver.user.fullName}&apos;s driver profile and
+              user account.
+            </p>
+          </div>
+        </div>
+      </DialogHeader>
+      <DialogContent>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          This action cannot be undone. Assigned ambulances are not deleted.
+        </div>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <Button
+            disabled={isDeleting}
+            onClick={() => onOpenChange(false)}
+            type="button"
+            variant="outline"
+          >
+            Cancel
+          </Button>
+          <Button
+            disabled={isDeleting}
+            onClick={onConfirm}
+            type="button"
+            variant="destructive"
+          >
+            {isDeleting ? "Deleting..." : "Delete driver"}
           </Button>
         </div>
       </DialogContent>

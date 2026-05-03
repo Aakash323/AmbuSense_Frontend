@@ -8,14 +8,14 @@ type AdminStatCardProps = {
   description: string;
   href?: string;
   icon: LucideIcon;
-  tone?: "emerald" | "sky" | "amber" | "rose" | "slate";
+  tone?: "blue" | "green" | "amber" | "red" | "slate";
 };
 
 const toneClasses = {
-  emerald: "bg-emerald-50 text-emerald-700",
-  sky: "bg-sky-50 text-sky-700",
+  blue: "bg-blue-50 text-blue-700",
+  green: "bg-green-50 text-green-700",
   amber: "bg-amber-50 text-amber-700",
-  rose: "bg-rose-50 text-rose-700",
+  red: "bg-red-50 text-red-700",
   slate: "bg-slate-100 text-slate-700",
 };
 
@@ -25,10 +25,10 @@ export function AdminStatCard({
   description,
   href,
   icon: Icon,
-  tone = "emerald",
+  tone = "blue",
 }: AdminStatCardProps) {
   const card = (
-    <Card className="h-full bg-white/90 transition hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md">
+    <Card className="h-full border-blue-100/80 bg-white/90 shadow-lg shadow-blue-950/5 transition hover:border-blue-200 hover:bg-white hover:shadow-xl hover:shadow-blue-950/10">
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -53,7 +53,7 @@ export function AdminStatCard({
   return (
     <Link
       aria-label={`Open ${title.toLowerCase()}`}
-      className="block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/25"
+      className="block h-full rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-blue-500/25"
       href={href}
     >
       {card}

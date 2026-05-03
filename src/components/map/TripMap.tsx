@@ -148,7 +148,7 @@ export function TripMap({ trip }: { trip: EmergencyRequest }) {
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+            <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
               <MapPin className="size-5" />
             </div>
             <div>

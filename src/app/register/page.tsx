@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -59,13 +60,20 @@ export default function RegisterPage() {
   const isDriverSignup = selectedRole === "driver";
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(20,184,166,0.16),transparent_34%),linear-gradient(135deg,#f7fffb_0%,#eefdf8_48%,#f8fafc_100%)] px-4 py-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.12),transparent_34%),linear-gradient(135deg,#ffffff_0%,#f4f6f9_48%,#eef3fb_100%)] px-4 py-10">
       <section className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl items-center justify-center">
         <div className="grid w-full items-center gap-8 lg:grid-cols-[420px_1fr]">
-          <Card className="border-emerald-100/80 bg-white/90 shadow-xl shadow-emerald-950/5 backdrop-blur">
+          <Card className="border-blue-100/80 bg-white/90 shadow-xl shadow-blue-950/5 backdrop-blur">
             <CardHeader className="text-center">
-              <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-teal-100 text-lg font-semibold text-teal-700">
-                +
+              <div className="mx-auto flex h-24 w-56 items-center justify-center rounded-xl bg-white px-3 shadow-inner ring-1 ring-blue-100">
+                <Image
+                  alt="AmbuSense logo"
+                  className="h-full w-full object-contain"
+                  height={120}
+                  priority
+                  src="/ambu-logo-cropped.png"
+                  width={260}
+                />
               </div>
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">
@@ -88,7 +96,7 @@ export default function RegisterPage() {
                       type="button"
                       className={`rounded-lg border px-3 py-3 text-left text-sm transition ${
                         selectedRole === "patient"
-                          ? "border-teal-500 bg-teal-50 text-teal-950 ring-3 ring-teal-500/15"
+                          ? "border-blue-500 bg-blue-50 text-blue-950 ring-3 ring-blue-500/15"
                           : "border-border bg-white text-muted-foreground hover:bg-muted/50"
                       }`}
                       onClick={() => form.setValue("role", "patient")}
@@ -102,7 +110,7 @@ export default function RegisterPage() {
                       type="button"
                       className={`rounded-lg border px-3 py-3 text-left text-sm transition ${
                         selectedRole === "driver"
-                          ? "border-emerald-500 bg-emerald-50 text-emerald-950 ring-3 ring-emerald-500/15"
+                          ? "border-blue-500 bg-blue-50 text-blue-950 ring-3 ring-blue-500/15"
                           : "border-border bg-white text-muted-foreground hover:bg-muted/50"
                       }`}
                       onClick={() => form.setValue("role", "driver")}
@@ -185,8 +193,8 @@ export default function RegisterPage() {
                 <Button
                   className={`h-11 w-full text-white ${
                     isDriverSignup
-                      ? "bg-emerald-600 hover:bg-emerald-700"
-                      : "bg-teal-600 hover:bg-teal-700"
+                      ? "bg-blue-600 hover:bg-blue-700"
+                      : "bg-blue-600 hover:bg-blue-700"
                   }`}
                   type="submit"
                   disabled={signup.isPending}
@@ -199,7 +207,7 @@ export default function RegisterPage() {
               <p className="mt-6 text-center text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link
-                  className="font-medium text-teal-700 underline-offset-4 hover:underline"
+                  className="font-medium text-blue-700 underline-offset-4 hover:underline"
                   href="/login"
                 >
                   Sign in
@@ -209,7 +217,7 @@ export default function RegisterPage() {
           </Card>
 
           <div className="hidden space-y-6 lg:block">
-            <div className="inline-flex rounded-full border border-teal-200 bg-white/70 px-3 py-1 text-sm font-medium text-teal-700 shadow-sm">
+            <div className="inline-flex rounded-full border border-blue-200 bg-white/70 px-3 py-1 text-sm font-medium text-blue-700 shadow-sm">
               Public signup for patients and drivers
             </div>
             <div className="space-y-4">
@@ -221,7 +229,7 @@ export default function RegisterPage() {
                 and complete document verification before taking trips.
               </p>
             </div>
-            <div className="rounded-xl border border-teal-100 bg-white/70 p-5 shadow-sm">
+            <div className="rounded-xl border border-blue-100 bg-white/70 p-5 shadow-sm">
               <p className="font-medium text-slate-900">What comes next</p>
               <p className="mt-2 text-sm leading-6 text-slate-500">
                 Driver accounts still need admin verification before operational

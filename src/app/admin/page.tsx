@@ -38,12 +38,12 @@ export default function AdminPage() {
   if (isError || !data) {
     return (
       <main className="p-4 sm:p-6">
-        <Card className="border-rose-200 bg-rose-50">
+        <Card className="border-red-200 bg-red-50">
           <CardContent className="p-6">
-            <p className="font-medium text-rose-800">
+            <p className="font-medium text-red-800">
               Failed to load dashboard summary
             </p>
-            <p className="mt-1 text-sm text-rose-700">
+            <p className="mt-1 text-sm text-red-700">
               {getFriendlyApiErrorMessage(error)}
             </p>
           </CardContent>
@@ -57,10 +57,10 @@ export default function AdminPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6">
-      <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white/90 shadow-sm">
+      <section className="overflow-hidden rounded-lg border border-blue-100/80 bg-white/90 shadow-xl shadow-blue-950/5 backdrop-blur">
         <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+            <Badge className="border-blue-200 bg-blue-50 text-blue-700">
               <HeartPulse className="size-3.5" />
               System overview
             </Badge>
@@ -91,7 +91,7 @@ export default function AdminPage() {
           href="/admin/ambulances?status=available&active=active"
           icon={CheckCircle2}
           title="Available ambulances"
-          tone="emerald"
+          tone="green"
           value={ambulanceStatus.available}
         />
         <AdminStatCard
@@ -99,7 +99,7 @@ export default function AdminPage() {
           href="/admin/ambulances?status=offline"
           icon={PowerOff}
           title="Offline ambulances"
-          tone="rose"
+          tone="red"
           value={ambulanceStatus.offline}
         />
         <AdminStatCard
@@ -107,7 +107,7 @@ export default function AdminPage() {
           href="/admin/hospitals"
           icon={Building2}
           title="Hospitals"
-          tone="sky"
+          tone="blue"
           value={data.hospitals.total}
         />
       </section>
@@ -134,7 +134,7 @@ export default function AdminPage() {
           href="/admin/requests?active=true"
           icon={Route}
           title="Active trips"
-          tone="sky"
+          tone="blue"
           value={data.emergencyRequests.active}
         />
         <AdminStatCard
@@ -142,7 +142,7 @@ export default function AdminPage() {
           href="/admin/requests?status=cancelled"
           icon={XCircle}
           title="Cancelled requests"
-          tone="rose"
+          tone="red"
           value={requestStatus.cancelled}
         />
       </section>
@@ -150,10 +150,10 @@ export default function AdminPage() {
       <section className="grid gap-4 lg:grid-cols-2">
         <Link
           aria-label="Open completed requests"
-          className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/25"
+          className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-blue-500/25"
           href="/admin/requests?status=completed"
         >
-        <Card className="h-full bg-white/90 transition hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md">
+        <Card className="h-full border-blue-100/80 bg-white/90 shadow-lg shadow-blue-950/5 transition hover:border-blue-200 hover:bg-white hover:shadow-xl hover:shadow-blue-950/10">
           <CardHeader>
             <h2 className="text-lg font-semibold">Request completion</h2>
             <p className="text-sm text-muted-foreground">
@@ -170,7 +170,7 @@ export default function AdminPage() {
                   completed requests
                 </p>
               </div>
-              <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+              <Badge className="border-green-200 bg-green-50 text-green-700">
                 Completed
               </Badge>
             </div>
@@ -180,10 +180,10 @@ export default function AdminPage() {
 
         <Link
           aria-label="Open hospital capacity"
-          className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-emerald-500/25"
+          className="block rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-blue-500/25"
           href="/admin/hospitals?status=available&hasAvailableBeds=true"
         >
-        <Card className="h-full bg-white/90 transition hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md">
+        <Card className="h-full border-blue-100/80 bg-white/90 shadow-lg shadow-blue-950/5 transition hover:border-blue-200 hover:bg-white hover:shadow-xl hover:shadow-blue-950/10">
           <CardHeader>
             <h2 className="text-lg font-semibold">Hospital capacity</h2>
             <p className="text-sm text-muted-foreground">

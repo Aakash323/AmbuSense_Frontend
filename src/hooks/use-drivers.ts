@@ -46,3 +46,19 @@ export function useVerifyDriver() {
     },
   });
 }
+
+export function useDeleteDriver() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (driverId: string) => {
+      const { data } = await api.delete<{ message: string }>(
+        `/drivers/${driverId}`,
+      );
+      return data;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: driverKeys.all });
+    },
+  });
+}

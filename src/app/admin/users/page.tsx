@@ -81,11 +81,11 @@ const pageSizeOptions = [5, 10, 20] as const;
 function getRoleClass(role: UserRole) {
   switch (role) {
     case "admin":
-      return "border-rose-200 bg-rose-50 text-rose-700";
+      return "border-red-200 bg-red-50 text-red-700";
     case "dispatcher":
       return "border-blue-200 bg-blue-50 text-blue-700";
     case "driver":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-blue-200 bg-blue-50 text-blue-700";
     case "patient":
     default:
       return "border-slate-200 bg-slate-50 text-slate-700";
@@ -247,9 +247,9 @@ export default function AdminUsersPage() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-      <section className="flex w-full flex-col gap-4 rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex w-full flex-col gap-4 rounded-lg border border-blue-100/80 bg-white/90 p-6 shadow-xl shadow-blue-950/5 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+          <Badge className="border-blue-200 bg-blue-50 text-blue-700">
             <Users className="size-3.5" />
             User management
           </Badge>
@@ -262,7 +262,7 @@ export default function AdminUsersPage() {
           </p>
         </div>
         <Button
-          className="bg-emerald-600 text-white hover:bg-emerald-700"
+          className="bg-blue-600 text-white hover:bg-blue-700"
           onClick={openCreateDialog}
           type="button"
         >
@@ -278,7 +278,7 @@ export default function AdminUsersPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  className="h-10 border-emerald-100 bg-white pl-9 shadow-sm"
+                  className="h-10 border-blue-100 bg-white pl-9 shadow-sm"
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search name, email, or phone"
                   value={search}
@@ -289,7 +289,7 @@ export default function AdminUsersPage() {
                   <Button
                     className={
                       active === item
-                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
                         : "bg-white"
                     }
                     key={item}
@@ -348,9 +348,9 @@ export default function AdminUsersPage() {
           ) : null}
 
           {usersQuery.isError ? (
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-4">
-              <p className="font-medium text-rose-800">Failed to load users</p>
-              <p className="mt-1 text-sm text-rose-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+              <p className="font-medium text-red-800">Failed to load users</p>
+              <p className="mt-1 text-sm text-red-700">
                 {getFriendlyApiErrorMessage(usersQuery.error)}
               </p>
             </div>
@@ -385,7 +385,7 @@ export default function AdminUsersPage() {
                     <TableRow key={getUserId(user)}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                          <div className="flex size-9 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
                             <UserRound className="size-4" />
                           </div>
                           <div className="min-w-0">
@@ -412,7 +412,7 @@ export default function AdminUsersPage() {
                         <Badge
                           className={
                             user.isActive
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              ? "border-blue-200 bg-blue-50 text-blue-700"
                               : "border-slate-200 bg-slate-50 text-slate-700"
                           }
                         >
@@ -474,7 +474,7 @@ export default function AdminUsersPage() {
                       <DropdownMenuItem
                         className={
                           pageSize === option
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "bg-blue-50 text-blue-700"
                             : undefined
                         }
                         key={option}
@@ -576,7 +576,7 @@ function UserDialog({
       <DialogClose onClick={onClose} />
       <DialogHeader>
         <div className="flex items-start gap-3 pr-10">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
             <ShieldCheck className="size-5" />
           </div>
           <div>
@@ -591,7 +591,7 @@ function UserDialog({
         {(mode === "view" || mode === "created") && displayUser ? (
           <div className="space-y-4">
             {mode === "created" ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
                 {displayUser.fullName} was created successfully. The password is
                 not displayed after creation.
               </div>
@@ -698,7 +698,7 @@ function UserDialog({
                 Cancel
               </Button>
               <Button
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
+                className="bg-blue-600 text-white hover:bg-blue-700"
                 disabled={isMutating}
                 type="submit"
               >
@@ -710,7 +710,7 @@ function UserDialog({
 
         {mode === "delete" && user ? (
           <div className="space-y-4">
-            <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
               Delete {user.fullName}? Are you sure you want to delete the user?
             </div>
             <div className="flex justify-end gap-2">

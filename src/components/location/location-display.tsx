@@ -85,7 +85,7 @@ export function LocationDisplay({
         <span className="min-w-0 truncate">{primaryText}</span>
         {hasCoordinates ? (
           <button
-            className="shrink-0 font-medium text-emerald-700 underline-offset-4 hover:underline"
+            className="shrink-0 font-medium text-blue-700 underline-offset-4 hover:underline"
             onClick={() => setIsMapOpen((value) => !value)}
             type="button"
           >

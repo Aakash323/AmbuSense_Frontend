@@ -92,7 +92,7 @@ function verificationCopy(state: VerificationState) {
       title: "Verified driver",
       description:
         "Your profile is approved. You can access trip controls as they become available.",
-      badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      badgeClass: "border-green-200 bg-green-50 text-green-700",
       Icon: ShieldCheck,
     };
   }
@@ -114,7 +114,7 @@ function verificationCopy(state: VerificationState) {
       title: "Document needs attention",
       description:
         "Your last submission was not approved. Review the note and upload a replacement document.",
-      badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
+      badgeClass: "border-red-200 bg-red-50 text-red-700",
       Icon: XCircle,
     };
   }
@@ -124,7 +124,7 @@ function verificationCopy(state: VerificationState) {
     title: "Verification required",
     description:
       "Upload a driver document so an admin can review your profile.",
-    badgeClass: "border-rose-200 bg-rose-50 text-rose-700",
+    badgeClass: "border-red-200 bg-red-50 text-red-700",
     Icon: ShieldAlert,
   };
 }
@@ -169,21 +169,21 @@ function formatStatus(value: string | null | undefined) {
 function getStatusClass(status: EmergencyRequestStatus) {
   switch (status) {
     case "pending":
-      return "border-yellow-200 bg-yellow-50 text-yellow-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "assigned":
       return "border-blue-200 bg-blue-50 text-blue-700";
     case "en-route":
-      return "border-purple-200 bg-purple-50 text-purple-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "at-patient":
-      return "border-cyan-200 bg-cyan-50 text-cyan-700";
+      return "border-red-200 bg-red-50 text-red-700";
     case "transporting":
-      return "border-indigo-200 bg-indigo-50 text-indigo-700";
+      return "border-amber-200 bg-amber-50 text-amber-700";
     case "at-hospital":
-      return "border-teal-200 bg-teal-50 text-teal-700";
+      return "border-red-200 bg-red-50 text-red-700";
     case "completed":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      return "border-green-200 bg-green-50 text-green-700";
     case "cancelled":
-      return "border-rose-200 bg-rose-50 text-rose-700";
+      return "border-red-200 bg-red-50 text-red-700";
     default:
       return "border-slate-200 bg-slate-50 text-slate-700";
   }
@@ -272,12 +272,12 @@ function DriverTripPanel({
 
   if (queryIsError) {
     return (
-      <Card className="border-rose-200 bg-rose-50" id="trip">
+      <Card className="border-red-200 bg-red-50" id="trip">
         <CardContent className="p-6">
-          <p className="font-medium text-rose-800">
+          <p className="font-medium text-red-800">
             Failed to load active trip
           </p>
-          <p className="mt-1 text-sm text-rose-700">
+          <p className="mt-1 text-sm text-red-700">
             {getFriendlyApiErrorMessage(queryError)}
           </p>
         </CardContent>
@@ -290,7 +290,7 @@ function DriverTripPanel({
       <Card id="trip">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+            <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
               <Route className="size-5" />
             </div>
             <div>
@@ -317,7 +317,7 @@ function DriverTripPanel({
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+              <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
                 <Route className="size-5" />
               </div>
               <div>
@@ -358,7 +358,7 @@ function DriverTripPanel({
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+              <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
                 <CheckCircle2 className="size-5" />
               </div>
               <div>
@@ -379,7 +379,7 @@ function DriverTripPanel({
                   </p>
                 </div>
                 <Button
-                  className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700"
                   disabled={isStatusPending}
                   onClick={() => onStatusUpdate(nextStatus)}
                   type="button"
@@ -400,7 +400,7 @@ function DriverTripPanel({
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+              <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
                 <RadioTower className="size-5" />
               </div>
               <div>
@@ -415,7 +415,7 @@ function DriverTripPanel({
             <Badge
               className={
                 isTrackingActive
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  ? "border-blue-200 bg-blue-50 text-blue-700"
                   : "border-amber-200 bg-amber-50 text-amber-700"
               }
             >
@@ -491,7 +491,7 @@ function OverviewActionCard({
 }) {
   return (
     <Link
-      className="group block rounded-xl border border-emerald-100 bg-white/90 p-6 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/50"
+      className="group block rounded-lg border border-blue-100/80 bg-white/90 p-6 shadow-lg shadow-blue-950/5 transition hover:border-blue-200 hover:bg-white hover:shadow-xl hover:shadow-blue-950/10"
       href={href}
     >
       <div className="flex items-start justify-between gap-4">
@@ -499,7 +499,7 @@ function OverviewActionCard({
           <h2 className="text-lg font-semibold">{title}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{description}</p>
         </div>
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 transition group-hover:bg-white">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:bg-white">
           <Icon className="size-5" />
         </div>
       </div>
@@ -771,10 +771,10 @@ export function DriverDashboardContent({
   return (
     <main className="p-4 sm:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <section className="overflow-hidden rounded-xl border border-emerald-100 bg-white/90 shadow-sm">
+        <section className="overflow-hidden rounded-lg border border-blue-100/80 bg-white/90 shadow-xl shadow-blue-950/5 backdrop-blur">
           <div className="flex flex-col gap-6 p-6 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700">
                 <Ambulance className="size-4" />
                 Driver workspace
               </div>
@@ -791,7 +791,7 @@ export function DriverDashboardContent({
               {copy.label}
             </Badge>
           </div>
-          <div className="grid border-t bg-emerald-50/50 sm:grid-cols-3">
+          <div className="grid border-t bg-blue-50/50 sm:grid-cols-3">
             <div className="border-b p-4 sm:border-b-0 sm:border-r">
               <p className="text-xs text-muted-foreground">Profile status</p>
               <p className="mt-1 text-sm font-medium">{copy.title}</p>
@@ -844,7 +844,7 @@ export function DriverDashboardContent({
                       {copy.description}
                     </p>
                   </div>
-                  <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                  <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
                     <StatusIcon className="size-5" />
                   </div>
                 </div>
@@ -870,7 +870,7 @@ export function DriverDashboardContent({
                 </div>
 
                 {profile?.verificationNote ? (
-                  <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
                     {profile.verificationNote}
                   </div>
                 ) : null}
@@ -903,7 +903,7 @@ export function DriverDashboardContent({
                             : "Document uploaded. Preview is unavailable."}
                       </p>
                     </div>
-                    <FileCheck2 className="size-5 text-emerald-600" />
+                    <FileCheck2 className="size-5 text-blue-600" />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -951,7 +951,7 @@ export function DriverDashboardContent({
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                    <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
                       <FileUp className="size-5" />
                     </div>
                     <div>
@@ -973,7 +973,7 @@ export function DriverDashboardContent({
                       <select
                       title="document-type"
                         id="documentType"
-                        className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none transition focus-visible:border-emerald-500 focus-visible:ring-3 focus-visible:ring-emerald-500/20"
+                        className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm shadow-xs outline-none transition focus-visible:border-blue-500 focus-visible:ring-3 focus-visible:ring-blue-500/20"
                         value={documentType}
                         onChange={(event) =>
                           setDocumentType(
@@ -993,10 +993,10 @@ export function DriverDashboardContent({
                     <div className="space-y-2">
                       <Label htmlFor="file">Document image</Label>
                       <label
-                        className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-200 bg-emerald-50/50 px-4 py-8 text-center transition hover:bg-emerald-50"
+                        className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-blue-200 bg-blue-50/50 px-4 py-8 text-center transition hover:bg-blue-50"
                         htmlFor="file"
                       >
-                        <FileUp className="size-8 text-emerald-600" />
+                        <FileUp className="size-8 text-blue-600" />
                         <span className="mt-3 text-sm font-medium text-slate-900">
                           Choose a document image
                         </span>
@@ -1004,7 +1004,7 @@ export function DriverDashboardContent({
                           JPEG, PNG, or WebP
                         </span>
                         {selectedFileName ? (
-                          <span className="mt-3 rounded-full bg-white px-3 py-1 text-xs font-medium text-emerald-700">
+                          <span className="mt-3 rounded-full bg-white px-3 py-1 text-xs font-medium text-blue-700">
                             {selectedFileName}
                           </span>
                         ) : null}
@@ -1024,7 +1024,7 @@ export function DriverDashboardContent({
                     </div>
 
                     <Button
-                      className="h-11 bg-emerald-600 text-white hover:bg-emerald-700"
+                      className="h-11 bg-blue-600 text-white hover:bg-blue-700"
                       disabled={uploadDocument.isPending || isFetching}
                       type="submit"
                     >
@@ -1059,7 +1059,7 @@ export function DriverDashboardContent({
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
+                    <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
                       <Lock className="size-5" />
                     </div>
                     <div>
@@ -1076,7 +1076,7 @@ export function DriverDashboardContent({
                 <CardContent>
                   <Button
                     asChild
-                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="bg-blue-600 text-white hover:bg-blue-700"
                   >
                     <Link href="/driver/verification">Go to verification</Link>
                   </Button>
