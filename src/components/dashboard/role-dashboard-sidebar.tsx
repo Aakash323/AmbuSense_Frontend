@@ -115,6 +115,12 @@ export function RoleDashboardSidebar({ role }: RoleDashboardSidebarProps) {
     }
   }
 
+  function collapseSidebarOnSmallScreen() {
+    if (window.innerWidth < 1024) {
+      setIsExpanded(false);
+    }
+  }
+
   return (
     <>
       {isExpanded ? (
@@ -197,7 +203,7 @@ export function RoleDashboardSidebar({ role }: RoleDashboardSidebarProps) {
                 key={item.href}
                 onClick={() => {
                   setCurrentHash(itemHash ? `#${itemHash}` : "");
-                  setIsExpanded(false);
+                  collapseSidebarOnSmallScreen();
                 }}
               >
                 <span

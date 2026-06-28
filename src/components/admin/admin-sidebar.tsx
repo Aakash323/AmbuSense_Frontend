@@ -67,6 +67,12 @@ export function AdminSidebar() {
     }
   }
 
+  function collapseSidebarOnSmallScreen() {
+    if (window.innerWidth < 1024) {
+      setIsExpanded(false);
+    }
+  }
+
   return (
     <>
       {isExpanded ? (
@@ -145,7 +151,7 @@ export function AdminSidebar() {
                 )}
                 href={item.href}
                 key={item.href}
-                onClick={() => setIsExpanded(false)}
+                onClick={collapseSidebarOnSmallScreen}
               >
                 <span
                   className={cn(
