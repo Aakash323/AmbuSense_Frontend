@@ -28,6 +28,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -242,6 +243,170 @@ function isTrackableTrip(trip: EmergencyRequest | null | undefined) {
   );
 }
 
+// Full-screen emergency alert overlay shown when a new trip is assigned
+function EmergencyAlertOverlay({
+  isStatusPending,
+  isRejectPending,
+  onStatusUpdate,
+  onTripReject,
+  trip,
+}: {
+  isStatusPending: boolean;
+  isRejectPending: boolean;
+  onStatusUpdate: (status: EmergencyRequestStatus) => void;
+  onTripReject: () => void;
+  trip: EmergencyRequest;
+}) {
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      aria-live="assertive"
+      aria-modal="true"
+      id="emergency-alert-overlay"
+      role="alertdialog"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(10, 10, 20, 0.97)",
+        animation: "emergencyFlash 1s ease-in-out infinite alternate",
+      }}
+    >
+      <style>{`
+        @keyframes emergencyFlash {
+          from { background: rgba(10, 10, 20, 0.97); }
+          to   { background: rgba(40, 0, 0, 0.97); }
+        }
+        @keyframes emergencyPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50%       { transform: scale(1.06); opacity: 0.85; }
+        }
+        @keyframes emergencyRing {
+          0%   { box-shadow: 0 0 0 0px rgba(239,68,68,0.7); }
+          70%  { box-shadow: 0 0 0 30px rgba(239,68,68,0); }
+          100% { box-shadow: 0 0 0 0px rgba(239,68,68,0); }
+        }
+        #emergency-alert-overlay .alert-icon {
+          animation: emergencyPulse 1s ease-in-out infinite;
+        }
+        #emergency-alert-overlay .ring-btn {
+          animation: emergencyRing 1.4s ease-out infinite;
+        }
+      `}</style>
+
+      {/* Icon + title */}
+      <div className="alert-icon mb-6 flex flex-col items-center gap-4 text-center">
+        <div style={{
+          fontSize: "5rem",
+          lineHeight: 1,
+          filter: "drop-shadow(0 0 24px rgba(239,68,68,0.9))",
+        }}>🚨</div>
+        <h1 style={{
+          color: "#fff",
+          fontSize: "clamp(1.6rem, 5vw, 2.4rem)",
+          fontWeight: 800,
+          letterSpacing: "-0.02em",
+          textShadow: "0 0 30px rgba(239,68,68,0.7)",
+          margin: 0,
+        }}>New Emergency Request</h1>
+        <p style={{
+          color: "rgba(255,255,255,0.65)",
+          fontSize: "1rem",
+          margin: 0,
+          maxWidth: "26rem",
+        }}>A patient needs urgent assistance. Please respond immediately.</p>
+      </div>
+
+      {/* Trip details */}
+      <div style={{
+        background: "rgba(255,255,255,0.06)",
+        border: "1px solid rgba(255,255,255,0.12)",
+        borderRadius: "1rem",
+        padding: "1.25rem 1.75rem",
+        marginBottom: "2rem",
+        width: "min(90vw, 28rem)",
+        display: "grid",
+        gap: "0.6rem",
+      }}>
+        {trip.patientName && (
+          <div style={{ display: "flex", justifyContent: "space-between", color: "#fff" }}>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem" }}>Patient</span>
+            <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{trip.patientName}</span>
+          </div>
+        )}
+        {trip.patientPhone && (
+          <div style={{ display: "flex", justifyContent: "space-between", color: "#fff" }}>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem" }}>Phone</span>
+            <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{trip.patientPhone}</span>
+          </div>
+        )}
+        {trip.assignedHospital?.name && (
+          <div style={{ display: "flex", justifyContent: "space-between", color: "#fff" }}>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.82rem" }}>Hospital</span>
+            <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{trip.assignedHospital.name}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "1rem",
+        width: "min(90vw, 28rem)",
+      }}>
+        <button
+          className="ring-btn"
+          disabled={isStatusPending || isRejectPending}
+          id="emergency-accept-btn"
+          onClick={() => onStatusUpdate("en-route")}
+          style={{
+            padding: "1.1rem",
+            borderRadius: "1rem",
+            border: "none",
+            background: "linear-gradient(135deg, #16a34a, #15803d)",
+            color: "#fff",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            cursor: isStatusPending || isRejectPending ? "not-allowed" : "pointer",
+            opacity: isStatusPending || isRejectPending ? 0.6 : 1,
+            letterSpacing: "0.01em",
+          }}
+          type="button"
+        >
+          {isStatusPending ? "Accepting…" : "✓ Accept"}
+        </button>
+        <button
+          disabled={isStatusPending || isRejectPending}
+          id="emergency-reject-btn"
+          onClick={onTripReject}
+          style={{
+            padding: "1.1rem",
+            borderRadius: "1rem",
+            border: "none",
+            background: "linear-gradient(135deg, #dc2626, #b91c1c)",
+            color: "#fff",
+            fontSize: "1.05rem",
+            fontWeight: 700,
+            cursor: isStatusPending || isRejectPending ? "not-allowed" : "pointer",
+            opacity: isStatusPending || isRejectPending ? 0.6 : 1,
+            letterSpacing: "0.01em",
+          }}
+          type="button"
+        >
+          {isRejectPending ? "Rejecting…" : "✕ Reject"}
+        </button>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
 function DriverTripPanel({
   isStatusPending,
   isRejectPending,
@@ -268,13 +433,24 @@ function DriverTripPanel({
   trip: EmergencyRequest | null;
 }) {
   const nextStatus = trip ? nextStatusByStatus[trip.status] : undefined;
+  const isAssigned = trip?.status === "assigned";
 
-  // Vibrate on trip assignment
+  // Continuously vibrate while the trip is in "assigned" state
   useEffect(() => {
-    if (trip?.status === "assigned" && "vibrate" in navigator) {
-      navigator.vibrate([500, 300, 500, 300, 500]);
-    }
-  }, [trip?.status]);
+    if (!isAssigned || !("vibrate" in navigator)) return;
+
+    // Immediate first burst
+    navigator.vibrate([500, 300]);
+
+    const intervalId = setInterval(() => {
+      navigator.vibrate([500, 300]);
+    }, 800); // repeat every 800ms (500 on + 300 off)
+
+    return () => {
+      clearInterval(intervalId);
+      navigator.vibrate(0); // stop any in-progress vibration
+    };
+  }, [isAssigned]);
 
   if (queryIsLoading) {
     return (
@@ -331,6 +507,16 @@ function DriverTripPanel({
 
   return (
     <div className="space-y-6" id="trip">
+      {/* Full-screen overlay when awaiting accept/reject */}
+      {isAssigned && (
+        <EmergencyAlertOverlay
+          isRejectPending={isRejectPending}
+          isStatusPending={isStatusPending}
+          onStatusUpdate={onStatusUpdate}
+          onTripReject={onTripReject}
+          trip={trip!}
+        />
+      )}
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -570,13 +756,34 @@ function useDriverTripSocketInvalidation(enabled: boolean) {
 
     const invalidateTrip = () => {
       queryClient.invalidateQueries({ queryKey: driverTripKeys.all });
+    };
+
+    const invalidateAmbulance = () => {
       queryClient.invalidateQueries({ queryKey: ["driver", "my-ambulance"] });
     };
 
-    socket.on("emergency.request.updated", invalidateTrip);
+    const invalidateAll = () => {
+      queryClient.invalidateQueries({ queryKey: driverTripKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["driver", "my-ambulance"] });
+    };
+
+    // Trip lifecycle events
+    socket.on("emergency.request.updated", invalidateAll);
+    socket.on("emergency.request.dispatched", invalidateAll);
+    socket.on("emergency.request.cancelled", invalidateTrip);
+    socket.on("emergency.request.deleted", invalidateTrip);
+
+    // Ambulance events (status change, assignment, etc.)
+    socket.on("ambulance.updated", invalidateAmbulance);
+    socket.on("ambulance.status.updated", invalidateAmbulance);
 
     return () => {
-      socket.off("emergency.request.updated", invalidateTrip);
+      socket.off("emergency.request.updated", invalidateAll);
+      socket.off("emergency.request.dispatched", invalidateAll);
+      socket.off("emergency.request.cancelled", invalidateTrip);
+      socket.off("emergency.request.deleted", invalidateTrip);
+      socket.off("ambulance.updated", invalidateAmbulance);
+      socket.off("ambulance.status.updated", invalidateAmbulance);
       releaseSocketConnection(token);
     };
   }, [enabled, queryClient]);

@@ -5,6 +5,11 @@ export const socket = io(
   {
     withCredentials: true,
     autoConnect: false,
+    // Aggressively try to reconnect — important for page navigations
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 3000,
   },
 );
 
@@ -25,7 +30,16 @@ export function acquireSocketConnection() {
 export function releaseSocketConnection(token: symbol) {
   socketConsumers.delete(token);
 
-  if (socketConsumers.size === 0 && socket.connected) {
-    socket.disconnect();
-  }
+  // Do NOT disconnect immediately — the driver may be navigating between
+  // pages and the socket should survive the brief gap.
+  // The connection is only truly dropped when the tab closes (see below).
+}
+
+// Only disconnect when the browser tab is actually being closed / refreshed.
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeunload", () => {
+    if (socket.connected) {
+      socket.disconnect();
+    }
+  });
 }

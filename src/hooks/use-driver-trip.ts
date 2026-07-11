@@ -31,6 +31,8 @@ export function useDriverMyTrip(enabled = true) {
         throw error;
       }
     },
+    // Poll every 5s as a safety net in case a socket event is missed
+    refetchInterval: 5000,
   });
 }
 
