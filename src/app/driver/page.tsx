@@ -8,6 +8,7 @@ import {
   FileCheck2,
   FileImage,
   FileUp,
+  History,
   Lock,
   MapPin,
   Navigation,
@@ -812,7 +813,7 @@ export function DriverDashboardContent({
         </section>
 
         {showOverview ? (
-          <section className="grid gap-6 md:grid-cols-2">
+          <section className="grid gap-6 md:grid-cols-3">
             <OverviewActionCard
               description="Review verification status, uploaded documents, and replacement upload controls."
               href="/driver/verification"
@@ -824,6 +825,12 @@ export function DriverDashboardContent({
               href="/driver/trip"
               Icon={Route}
               title="Trip controls"
+            />
+            <OverviewActionCard
+              description="View your past and active emergency ride history."
+              href="/driver/history"
+              Icon={History}
+              title="Ride history"
             />
           </section>
         ) : null}

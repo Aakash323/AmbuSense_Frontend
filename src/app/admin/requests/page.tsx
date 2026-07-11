@@ -28,6 +28,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { LocationDisplay } from "@/components/location/location-display";
+import { TripMap } from "@/components/map/TripMap";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -997,6 +998,11 @@ function RequestDetails({ request }: { request: EmergencyRequest }) {
           </div>
         </div>
       ) : null}
+      
+      {/* Real-time map view of the emergency request */}
+      <div className="mt-6">
+        <TripMap trip={request} />
+      </div>
     </div>
   );
 }

@@ -16,28 +16,39 @@ type DropdownMenuProps = {
 function DropdownMenu({ trigger, children, side = "bottom" }: DropdownMenuProps) {
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
   const [position, setPosition] = React.useState<React.CSSProperties>({
     right: 0,
     top: 0,
+    visibility: "hidden",
   });
 
   React.useLayoutEffect(() => {
-    if (!open || !triggerRef.current) {
+    if (!open || !triggerRef.current || !contentRef.current) {
       return;
     }
 
     const rect = triggerRef.current.getBoundingClientRect();
     const right = window.innerWidth - rect.right;
+    const menuHeight = contentRef.current.offsetHeight;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    const shouldShowAbove =
+      side === "top" ||
+      (side === "bottom" && spaceBelow < menuHeight + 8 && spaceAbove > spaceBelow);
 
     setPosition(
-      side === "top"
+      shouldShowAbove
         ? {
             bottom: window.innerHeight - rect.top + 8,
             right,
+            visibility: "visible",
           }
         : {
             top: rect.bottom + 8,
             right,
+            visibility: "visible",
           },
     );
   }, [open, side]);
@@ -60,6 +71,7 @@ function DropdownMenu({ trigger, children, side = "bottom" }: DropdownMenuProps)
             type="button"
           />
           <div
+            ref={contentRef}
             className="fixed z-[1200] min-w-40 rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg"
             style={position}
           >

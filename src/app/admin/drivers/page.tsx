@@ -40,8 +40,10 @@ import {
   useDrivers,
   useVerifyDriver,
 } from "@/hooks/use-drivers";
+import { useEmergencyRequests } from "@/hooks/use-emergency-requests";
 import { getFriendlyApiErrorMessage } from "@/lib/api";
 import type { AdminDriver } from "@/types/drivers";
+import type { EmergencyRequestStatus } from "@/types/emergency-requests";
 
 const pageSizeOptions = [5, 10, 20] as const;
 
@@ -500,7 +502,7 @@ function DriverDetailsDialog({
           </div>
         </div>
       </DialogHeader>
-      <DialogContent className="space-y-5">
+      <DialogContent className="space-y-5 max-h-[85vh] overflow-y-auto">
         <div className="grid gap-3 sm:grid-cols-4">
           <div className="rounded-lg border bg-muted/30 p-3">
             <p className="text-xs text-muted-foreground">
@@ -637,7 +639,18 @@ function DriverDetailsDialog({
           </div>
         ) : null}
 
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="space-y-3 pt-2">
+          <h3 className="text-lg font-medium">Ride History</h3>
+          {driver.assignedAmbulance ? (
+            <DriverHistoryTable ambulanceId={driver.assignedAmbulance.id} />
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground bg-slate-50/50">
+              No ambulance assigned. Ride history is tracked per ambulance.
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button
             className="bg-blue-600 text-white hover:bg-blue-700"
             disabled={isMutating || !driver.documentImageId}
@@ -721,5 +734,73 @@ function DeleteDriverDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function formatRequestStatus(value: string | undefined) {
+  if (!value) return "Unknown";
+  return value.split("-").map(p => p[0].toUpperCase() + p.slice(1)).join(" ");
+}
+
+function getRequestStatusClass(status: EmergencyRequestStatus) {
+  switch (status) {
+    case "completed":
+      return "border-green-200 bg-green-50 text-green-700";
+    case "cancelled":
+      return "border-red-200 bg-red-50 text-red-700";
+    default:
+      return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+}
+
+function DriverHistoryTable({ ambulanceId }: { ambulanceId: string }) {
+  const { data: requests, isLoading } = useEmergencyRequests({ assignedAmbulance: ambulanceId });
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground p-4">Loading history...</div>;
+  }
+
+  if (!requests || requests.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground bg-slate-50/50">
+        No rides found for this driver's ambulance.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border bg-white">
+      <Table>
+        <TableHeader className="bg-slate-50/50">
+          <TableRow>
+            <TableHead className="w-[120px]">Date</TableHead>
+            <TableHead>Patient</TableHead>
+            <TableHead>Hospital</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {requests.map(req => (
+            <TableRow key={req.id ?? req._id}>
+              <TableCell className="text-xs text-muted-foreground">
+                {formatDate(req.createdAt)}
+              </TableCell>
+              <TableCell>
+                <div className="font-medium">{req.patientName}</div>
+                <div className="text-xs text-muted-foreground">{req.patientPhone}</div>
+              </TableCell>
+              <TableCell className="text-sm">
+                {req.assignedHospital?.name ?? "N/A"}
+              </TableCell>
+              <TableCell>
+                <Badge className={getRequestStatusClass(req.status)}>
+                  {formatRequestStatus(req.status)}
+                </Badge>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

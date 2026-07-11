@@ -33,6 +33,7 @@ type LocationInputProps = {
   onLatitudeChange: (value: string) => void;
   onLongitudeChange: (value: string) => void;
   title: string;
+  iconType?: "hospital" | "ambulance" | "patient" | "default";
 };
 
 function toCoordinateStrings([lng, lat]: Coordinates) {
@@ -64,6 +65,7 @@ export function LocationInput({
   onLatitudeChange,
   onLongitudeChange,
   title,
+  iconType = "default",
 }: LocationInputProps) {
   const [message, setMessage] = useState<string | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -116,6 +118,7 @@ export function LocationInput({
               address={address}
               coordinates={coordinates}
               label={title}
+              mapMode="none"
             />
           </div>
         </div>
@@ -140,6 +143,7 @@ export function LocationInput({
           <div className="mt-3 space-y-2">
             <LocationMapPicker
               coordinates={coordinates}
+              iconType={iconType}
               onChange={(nextCoordinates) => {
                 applyCoordinates(nextCoordinates);
                 setMessage("Map location selected.");

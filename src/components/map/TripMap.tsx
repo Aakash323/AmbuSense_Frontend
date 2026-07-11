@@ -77,7 +77,9 @@ export function TripMap({ trip }: { trip: EmergencyRequest }) {
   const requestId = getRequestId(trip);
   const ambulanceId = getAmbulanceId(trip.assignedAmbulance);
   const [liveAmbulanceCoordinates, setLiveAmbulanceCoordinates] =
-    useState<RouteCoordinates | null>(null);
+    useState<RouteCoordinates | null>(
+      trip.assignedAmbulance?.currentLocation?.coordinates ?? null,
+    );
   const ambulanceCoordinates =
     liveAmbulanceCoordinates ??
     trip.assignedAmbulance?.currentLocation?.coordinates;
@@ -189,6 +191,17 @@ export function TripMap({ trip }: { trip: EmergencyRequest }) {
               hospitalCoordinates={hospitalCoordinates}
               pickupCoordinates={pickupCoordinates}
               route={routeQuery.data ?? null}
+              ambulanceDetails={{
+                code: trip.assignedAmbulance?.ambulanceCode ?? "Unknown",
+                driverName: trip.assignedAmbulance?.driverName,
+              }}
+              hospitalDetails={{
+                name: trip.assignedHospital?.name ?? "Hospital",
+              }}
+              patientDetails={{
+                name: trip.patientName,
+                phone: trip.patientPhone,
+              }}
             />
           </div>
         ) : null}

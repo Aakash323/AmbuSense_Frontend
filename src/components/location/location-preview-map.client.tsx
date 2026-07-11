@@ -3,49 +3,16 @@
 import L from "leaflet";
 import { useEffect } from "react";
 import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { createAmbulanceIcon, createHospitalIcon, createPatientIcon } from "../map/icons";
 
 type Coordinates = [number, number];
 
 type LocationPreviewMapProps = {
   coordinates: Coordinates;
+  iconType?: "hospital" | "ambulance" | "patient" | "default";
 };
 
-const markerIcon = L.divIcon({
-  className: "",
-  html: `
-    <div style="
-      align-items: center;
-      background: white;
-      border-radius: 9999px;
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
-      display: flex;
-      height: 36px;
-      justify-content: center;
-      width: 36px;
-    ">
-      <div style="
-        background: #059669;
-        border: 4px solid #047857;
-        border-radius: 9999px 9999px 9999px 0;
-        height: 22px;
-        transform: rotate(-45deg);
-        width: 22px;
-      ">
-        <div style="
-          background: white;
-          border-radius: 9999px;
-          height: 7px;
-          left: 3.5px;
-          position: relative;
-          top: 3.5px;
-          width: 7px;
-        "></div>
-      </div>
-    </div>
-  `,
-  iconAnchor: [18, 36],
-  iconSize: [36, 36],
-});
+
 
 function toLatLng([lng, lat]: Coordinates): [number, number] {
   return [lat, lng];
@@ -67,7 +34,17 @@ function RefreshMapSize() {
 
 export default function LocationPreviewMap({
   coordinates,
+  iconType = "default",
 }: LocationPreviewMapProps) {
+  const icon =
+    iconType === "hospital"
+      ? createHospitalIcon()
+      : iconType === "ambulance"
+        ? createAmbulanceIcon()
+        : iconType === "patient"
+          ? createPatientIcon()
+          : createAmbulanceIcon(); // Default to ambulance for generic locations if needed, or we could keep a generic one. Let's use ambulance as default fallback for now since it's AmbuSense.
+
   return (
     <div className="relative z-0 mt-3 overflow-hidden rounded-lg border">
       <MapContainer
@@ -81,7 +58,7 @@ export default function LocationPreviewMap({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Marker icon={markerIcon} position={toLatLng(coordinates)} />
+        <Marker icon={icon} position={toLatLng(coordinates)} />
         <RefreshMapSize />
       </MapContainer>
     </div>

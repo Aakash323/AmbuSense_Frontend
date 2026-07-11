@@ -554,7 +554,7 @@ export default function AdminHospitalsPage() {
                     {hasCoordinates && mapIsOpen ? (
                       <TableRow>
                         <TableCell className="bg-muted/20 p-4" colSpan={6}>
-                          <LocationPreviewMap coordinates={coordinates} />
+                          <LocationPreviewMap coordinates={coordinates} iconType="hospital" />
                         </TableCell>
                       </TableRow>
                     ) : null}
@@ -802,6 +802,7 @@ function HospitalDialog({
                 onFormChange({ ...form, longitude })
               }
               title="Hospital location"
+              iconType="hospital"
             />
             <Field label="Specialization">
               <Input

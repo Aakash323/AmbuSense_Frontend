@@ -2,59 +2,20 @@
 
 import L from "leaflet";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  MapContainer,
-  Marker,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { createAmbulanceIcon, createHospitalIcon, createPatientIcon } from "../map/icons";
 
 type Coordinates = [number, number];
 
 type LocationMapPickerProps = {
   coordinates: Coordinates | null;
   onChange: (coordinates: Coordinates) => void;
+  iconType?: "hospital" | "ambulance" | "patient" | "default";
 };
 
 const defaultCoordinates: Coordinates = [85.324, 27.7172];
 
-const markerIcon = L.divIcon({
-  className: "",
-  html: `
-    <div style="
-      align-items: center;
-      background: white;
-      border-radius: 9999px;
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
-      display: flex;
-      height: 40px;
-      justify-content: center;
-      width: 40px;
-    ">
-      <div style="
-        background: #059669;
-        border: 4px solid #047857;
-        border-radius: 9999px 9999px 9999px 0;
-        height: 24px;
-        transform: rotate(-45deg);
-        width: 24px;
-      ">
-        <div style="
-          background: white;
-          border-radius: 9999px;
-          height: 8px;
-          left: 4px;
-          position: relative;
-          top: 4px;
-          width: 8px;
-        "></div>
-      </div>
-    </div>
-  `,
-  iconAnchor: [20, 40],
-  iconSize: [40, 40],
-});
+
 
 function toLatLng([lng, lat]: Coordinates): [number, number] {
   return [lat, lng];
@@ -102,6 +63,7 @@ function RefreshMapSize() {
 export default function LocationMapPicker({
   coordinates,
   onChange,
+  iconType = "default",
 }: LocationMapPickerProps) {
   const [selectedCoordinates, setSelectedCoordinates] =
     useState<Coordinates>(coordinates ?? defaultCoordinates);
@@ -143,7 +105,15 @@ export default function LocationMapPicker({
         <Marker
           draggable
           eventHandlers={markerEventHandlers}
-          icon={markerIcon}
+          icon={
+            iconType === "hospital"
+              ? createHospitalIcon()
+              : iconType === "ambulance"
+                ? createAmbulanceIcon()
+                : iconType === "patient"
+                  ? createPatientIcon()
+                  : createAmbulanceIcon()
+          }
           position={toLatLng(selectedCoordinates)}
         />
         <MapClickHandler onChange={handleChange} />

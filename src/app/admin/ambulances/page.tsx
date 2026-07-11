@@ -306,6 +306,14 @@ export default function AdminAmbulancesPage() {
             coordinates: payload.coordinates,
           },
         });
+        
+        if (selectedAmbulance.status !== form.status) {
+          await updateStatus.mutateAsync({
+            ambulanceId: getAmbulanceId(selectedAmbulance),
+            status: form.status,
+          });
+        }
+        
         toast.success("Ambulance updated");
       }
 
@@ -594,7 +602,7 @@ export default function AdminAmbulancesPage() {
                     {hasCoordinates && mapIsOpen ? (
                       <TableRow>
                         <TableCell className="bg-muted/20 p-4" colSpan={7}>
-                          <LocationPreviewMap coordinates={coordinates} />
+                          <LocationPreviewMap coordinates={coordinates} iconType="ambulance" />
                         </TableCell>
                       </TableRow>
                     ) : null}
@@ -785,7 +793,6 @@ function AmbulanceDialog({
                 <select
                   title="Ambulance Status"
                   className="h-8 w-full rounded-lg border bg-background px-3 text-sm disabled:opacity-60"
-                  disabled={mode === "edit"}
                   onChange={(event) =>
                     onFormChange({
                       ...form,
@@ -813,6 +820,7 @@ function AmbulanceDialog({
                 onFormChange({ ...form, longitude })
               }
               title="Ambulance location"
+              iconType="ambulance"
             />
             {mode === "create" ? (
               <label className="flex items-center gap-2 text-sm">

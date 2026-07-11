@@ -8,6 +8,7 @@ import {
   Clock3,
   ClipboardList,
   Eye,
+  History,
   Hospital,
   MoreHorizontal,
   Navigation,
@@ -395,8 +396,8 @@ export function PatientDashboardContent({
           <OverviewActionCard
             description="Review your request history, open details, cancel active requests, and track assigned trips."
             href="/patient/requests"
-            Icon={Navigation}
-            title="My requests"
+            Icon={History}
+            title="Request history"
           />
         </section>
       ) : null}
@@ -443,6 +444,7 @@ export function PatientDashboardContent({
                   setForm((current) => ({ ...current, longitude }))
                 }
                 title="Pickup location"
+                iconType="patient"
               />
               <Field label="Preferred Hospital">
                 <select
@@ -492,7 +494,7 @@ export function PatientDashboardContent({
         <Card className="min-w-0 border-blue-100/80 bg-white/90 shadow-lg shadow-blue-950/5" id="my-requests">
           <CardContent className="space-y-4 p-4">
             <div>
-              <h2 className="text-lg font-semibold">My Requests</h2>
+              <h2 className="text-lg font-semibold">Request History</h2>
               <p className="mt-1 text-sm text-muted-foreground">
                 Your request history and dispatch status.
               </p>
