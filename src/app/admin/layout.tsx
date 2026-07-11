@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { ProtectedRoleLayout } from "@/components/auth/protected-role-layout";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard",
+  description: "AmbuSense Administration and Resource Management",
+};
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
