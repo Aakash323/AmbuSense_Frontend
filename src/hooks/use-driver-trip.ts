@@ -50,3 +50,20 @@ export function useUpdateDriverTripStatus() {
     },
   });
 }
+
+export function useRejectDriverTrip() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await api.patch<{ message: string }>(
+        "/driver/my-trip/reject",
+      );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: driverTripKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["driver", "my-ambulance"] });
+    },
+  });
+}

@@ -17,6 +17,7 @@ import {
   Route,
   ShieldAlert,
   ShieldCheck,
+  WifiOff,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -38,8 +39,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useMe } from "@/hooks/use-auth";
 import {
+  useDriverAmbulance,
+  useUpdateAmbulanceStatus,
+} from "@/hooks/use-driver-ambulance";
+import {
   driverTripKeys,
   useDriverMyTrip,
+  useRejectDriverTrip,
   useUpdateDriverTripStatus,
 } from "@/hooks/use-driver-trip";
 import { api, getFriendlyApiErrorMessage } from "@/lib/api";
@@ -238,9 +244,11 @@ function isTrackableTrip(trip: EmergencyRequest | null | undefined) {
 
 function DriverTripPanel({
   isStatusPending,
+  isRejectPending,
   isTrackingActive,
   lastKnownLocation,
   onStatusUpdate,
+  onTripReject,
   queryError,
   queryIsError,
   queryIsLoading,
@@ -248,9 +256,11 @@ function DriverTripPanel({
   trip,
 }: {
   isStatusPending: boolean;
+  isRejectPending: boolean;
   isTrackingActive: boolean;
   lastKnownLocation: LastKnownLocation | null;
   onStatusUpdate: (status: EmergencyRequestStatus) => void;
+  onTripReject: () => void;
   queryError: unknown;
   queryIsError: boolean;
   queryIsLoading: boolean;
@@ -258,6 +268,13 @@ function DriverTripPanel({
   trip: EmergencyRequest | null;
 }) {
   const nextStatus = trip ? nextStatusByStatus[trip.status] : undefined;
+
+  // Vibrate on trip assignment
+  useEffect(() => {
+    if (trip?.status === "assigned" && "vibrate" in navigator) {
+      navigator.vibrate([500, 300, 500, 300, 500]);
+    }
+  }, [trip?.status]);
 
   if (queryIsLoading) {
     return (
@@ -371,7 +388,36 @@ function DriverTripPanel({
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {nextStatus ? (
+            {trip.status === "assigned" ? (
+              <>
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm animate-pulse">
+                  <p className="font-semibold text-amber-800 flex items-center gap-2">
+                    🚨 New Emergency Request
+                  </p>
+                  <p className="mt-1 text-amber-700">
+                    A patient needs urgent assistance. Please accept or reject this request.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    className="w-full bg-green-600 text-white hover:bg-green-700 font-semibold shadow-sm"
+                    disabled={isStatusPending || isRejectPending}
+                    onClick={() => onStatusUpdate("en-route")}
+                    type="button"
+                  >
+                    {isStatusPending ? "Accepting..." : "✓ Accept"}
+                  </Button>
+                  <Button
+                    className="w-full bg-red-600 text-white hover:bg-red-700 font-semibold shadow-sm"
+                    disabled={isStatusPending || isRejectPending}
+                    onClick={onTripReject}
+                    type="button"
+                  >
+                    {isRejectPending ? "Rejecting..." : "✕ Reject"}
+                  </Button>
+                </div>
+              </>
+            ) : nextStatus ? (
               <>
                 <div className="rounded-lg border bg-muted/30 p-4 text-sm">
                   <p className="text-muted-foreground">Next status</p>
@@ -524,6 +570,7 @@ function useDriverTripSocketInvalidation(enabled: boolean) {
 
     const invalidateTrip = () => {
       queryClient.invalidateQueries({ queryKey: driverTripKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["driver", "my-ambulance"] });
     };
 
     socket.on("emergency.request.updated", invalidateTrip);
@@ -679,7 +726,11 @@ export function DriverDashboardContent({
   useDriverTripSocketInvalidation(isVerified);
   const myTripQuery = useDriverMyTrip(isVerified);
   const updateTripStatus = useUpdateDriverTripStatus();
+  const rejectTrip = useRejectDriverTrip();
   const activeTrip = myTripQuery.data ?? null;
+  const driverAmbulanceQuery = useDriverAmbulance();
+  const ambulance = driverAmbulanceQuery.data;
+  const updateAmbulanceStatus = useUpdateAmbulanceStatus();
   const { isTrackingActive, lastKnownLocation, trackingMessage } =
     useDriverLiveLocationTracking({
       isVerified,
@@ -753,6 +804,15 @@ export function DriverDashboardContent({
     }
   }
 
+  async function handleTripReject() {
+    try {
+      await rejectTrip.mutateAsync();
+      toast.success("Request rejected. Dispatching to next available driver.");
+    } catch (error) {
+      toast.error(getFriendlyApiErrorMessage(error));
+    }
+  }
+
   if (isLoading) {
     return (
       <main className="p-6">
@@ -811,6 +871,96 @@ export function DriverDashboardContent({
             </div>
           </div>
         </section>
+
+        {isVerified && ambulance?.status === "completed" && (
+          <Card className="border-blue-200 bg-blue-50/50 shadow-md backdrop-blur">
+            <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
+                  <CheckCircle2 className="size-5 text-blue-600 animate-bounce" />
+                  Trip Completed!
+                </h2>
+                <p className="text-sm text-blue-700 mt-1">
+                  Please select your availability status to continue receiving emergency assignments.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  className="bg-green-600 text-white hover:bg-green-700 shadow-sm"
+                  disabled={updateAmbulanceStatus.isPending}
+                  onClick={() => {
+                    updateAmbulanceStatus.mutate({
+                      ambulanceId: ambulance.id || ambulance._id || "",
+                      status: "available"
+                    }, {
+                      onSuccess: () => {
+                        toast.success("You are now Online (Available)");
+                      }
+                    });
+                  }}
+                >
+                  Stay Online
+                </Button>
+                <Button
+                  className="bg-slate-600 text-white hover:bg-slate-700 shadow-sm"
+                  disabled={updateAmbulanceStatus.isPending}
+                  onClick={() => {
+                    updateAmbulanceStatus.mutate({
+                      ambulanceId: ambulance.id || ambulance._id || "",
+                      status: "offline"
+                    }, {
+                      onSuccess: () => {
+                        toast.success("You are now Offline");
+                      }
+                    });
+                  }}
+                >
+                  Go Offline
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {isVerified && ambulance?.status === "offline" && (
+          <Card className="border-slate-200 bg-slate-50/80 shadow-md backdrop-blur">
+            <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                  <WifiOff className="size-5 text-slate-500" />
+                  Welcome back!
+                </h2>
+                <p className="text-sm text-slate-600 mt-1">
+                  Your ambulance is currently <strong>Offline</strong>. Would you like to go Online and receive emergency assignments?
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  className="bg-green-600 text-white hover:bg-green-700 shadow-sm"
+                  disabled={updateAmbulanceStatus.isPending}
+                  onClick={() => {
+                    updateAmbulanceStatus.mutate({
+                      ambulanceId: ambulance.id || ambulance._id || "",
+                      status: "available"
+                    }, {
+                      onSuccess: () => {
+                        toast.success("You are now Online and ready to receive assignments.");
+                      }
+                    });
+                  }}
+                >
+                  Go Online
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={updateAmbulanceStatus.isPending}
+                >
+                  Stay Offline
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {showOverview ? (
           <section className="grid gap-6 md:grid-cols-3">
@@ -1051,9 +1201,11 @@ export function DriverDashboardContent({
             {showTrip && isVerified ? (
               <DriverTripPanel
                 isStatusPending={updateTripStatus.isPending}
+                isRejectPending={rejectTrip.isPending}
                 isTrackingActive={isTrackingActive}
                 lastKnownLocation={lastKnownLocation}
                 onStatusUpdate={handleTripStatusUpdate}
+                onTripReject={handleTripReject}
                 queryError={myTripQuery.error}
                 queryIsError={myTripQuery.isError}
                 queryIsLoading={myTripQuery.isLoading}
@@ -1112,6 +1264,41 @@ export function DriverDashboardContent({
                 <p className="text-muted-foreground">Verification</p>
                 <p className="font-medium">{copy.label}</p>
               </div>
+              {isVerified && ambulance && (
+                <div className="pt-2">
+                  <Separator className="my-3" />
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Operational Status</p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-block size-2.5 rounded-full ${
+                        ambulance.status === "available" ? "bg-green-500 animate-pulse" :
+                        ambulance.status === "offline" ? "bg-slate-400" :
+                        "bg-amber-500"
+                      }`} />
+                      <span className="font-medium capitalize">{ambulance.status}</span>
+                    </div>
+                    {(ambulance.status === "available" || ambulance.status === "offline") && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          updateAmbulanceStatus.mutate({
+                            ambulanceId: ambulance.id || ambulance._id || "",
+                            status: ambulance.status === "available" ? "offline" : "available"
+                          }, {
+                            onSuccess: () => {
+                              toast.success(`You are now ${ambulance.status === "available" ? "Offline" : "Online"}`);
+                            }
+                          });
+                        }}
+                        disabled={updateAmbulanceStatus.isPending}
+                      >
+                        {ambulance.status === "available" ? "Go Offline" : "Go Online"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
