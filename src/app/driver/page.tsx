@@ -435,22 +435,57 @@ function DriverTripPanel({
   const nextStatus = trip ? nextStatusByStatus[trip.status] : undefined;
   const isAssigned = trip?.status === "assigned";
 
-  // Continuously vibrate while the trip is in "assigned" state
+  // Store the latest onTripReject to use inside the timer without resetting it
+  const onTripRejectRef = useRef(onTripReject);
   useEffect(() => {
-    if (!isAssigned || !("vibrate" in navigator)) return;
+    onTripRejectRef.current = onTripReject;
+  }, [onTripReject]);
 
-    // Immediate first burst
-    navigator.vibrate([500, 300]);
+  // Continuously vibrate and set auto-reject timer while the trip is in "assigned" state
+  useEffect(() => {
+    if (!isAssigned) return;
 
-    const intervalId = setInterval(() => {
+    let intervalId: NodeJS.Timeout | undefined;
+    if ("vibrate" in navigator) {
+      // Immediate first burst
       navigator.vibrate([500, 300]);
-    }, 800); // repeat every 800ms (500 on + 300 off)
+
+      intervalId = setInterval(() => {
+        navigator.vibrate([500, 300]);
+      }, 800); // repeat every 800ms (500 on + 300 off)
+    }
+
+    // Calculate time remaining based on when it was assigned
+    let timeoutMs = 60000;
+    if (trip?.assignedAt) {
+      const assignedTime = new Date(trip.assignedAt).getTime();
+      const now = Date.now();
+      const elapsed = now - assignedTime;
+      timeoutMs = Math.max(0, 60000 - elapsed);
+    }
+
+    const triggerReject = () => {
+      onTripRejectRef.current();
+      toast.info("Trip auto-rejected and forwarded to another driver due to inactivity", { duration: 5000 });
+    };
+
+    let timeoutId: NodeJS.Timeout | undefined;
+    if (timeoutMs === 0) {
+      // Already expired, reject immediately
+      triggerReject();
+    } else {
+      // Auto-reject after the remaining idle time
+      timeoutId = setTimeout(triggerReject, timeoutMs);
+    }
 
     return () => {
-      clearInterval(intervalId);
-      navigator.vibrate(0); // stop any in-progress vibration
+      if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
+      if ("vibrate" in navigator) {
+        navigator.vibrate(0); // stop any in-progress vibration
+      }
     };
-  }, [isAssigned]);
+  }, [isAssigned, trip?.assignedAt]);
 
   if (queryIsLoading) {
     return (

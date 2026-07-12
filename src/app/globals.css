@@ -134,3 +134,14 @@
     @apply bg-blue-200 text-blue-950;
   }
 }
+
+/* Smooth movement for map markers */
+.ambulance-icon, .hospital-icon, .patient-icon {
+  transition: transform 1s linear;
+}
+/* Disable transition during map zoom to prevent weird animation artifacts */
+.leaflet-zoom-anim .ambulance-icon,
+.leaflet-zoom-anim .hospital-icon,
+.leaflet-zoom-anim .patient-icon {
+  transition: none;
+}

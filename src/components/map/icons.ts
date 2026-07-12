@@ -1,8 +1,8 @@
 import L from "leaflet";
 
-function createCircleIcon(svgContent: string, backgroundColor: string, borderColor: string) {
+function createCircleIcon(svgContent: string, backgroundColor: string, borderColor: string, customClass = "") {
   return L.divIcon({
-    className: "",
+    className: customClass,
     html: `
       <div style="
         display:flex;
@@ -30,7 +30,8 @@ export function createAmbulanceIcon() {
   return createCircleIcon(
     `<path d="M10 17H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h12v6"/><path d="M14 8h6l3 4v3h-2"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M6 11h4M8 9v4"/>`,
     "#059669", // emerald-600
-    "#047857"  // emerald-700
+    "#047857", // emerald-700
+    "ambulance-icon"
   );
 }
 
@@ -38,7 +39,8 @@ export function createHospitalIcon() {
   return createCircleIcon(
     `<path d="M12 6v4"/><path d="M14 14h-4"/><path d="M14 18h-4"/><path d="M14 8h-4"/><path d="M18 12h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/><path d="M18 22V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v18"/>`,
     "#dc2626", // red-600
-    "#b91c1c"  // red-700
+    "#b91c1c",  // red-700
+    "hospital-icon"
   );
 }
 
@@ -46,6 +48,7 @@ export function createPatientIcon() {
   return createCircleIcon(
     `<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>`,
     "#7e22ce", // purple-700
-    "#6b21a8"  // purple-800
+    "#6b21a8", // purple-800
+    "patient-icon"
   );
 }
