@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -80,6 +81,8 @@ export function TripMap({ trip }: { trip: EmergencyRequest }) {
     useState<RouteCoordinates | null>(
       trip.assignedAmbulance?.currentLocation?.coordinates ?? null,
     );
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   const ambulanceCoordinates =
     liveAmbulanceCoordinates ??
     trip.assignedAmbulance?.currentLocation?.coordinates;
@@ -134,6 +137,28 @@ export function TripMap({ trip }: { trip: EmergencyRequest }) {
     };
   }, [ambulanceId, queryClient, requestId]);
 
+  // Close fullscreen on Escape key
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isFullscreen]);
+
+  // Prevent body scroll when fullscreen is open
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isFullscreen]);
+
   const routeSummary = useMemo(() => {
     if (!routeQuery.data) {
       return null;
@@ -145,74 +170,171 @@ export function TripMap({ trip }: { trip: EmergencyRequest }) {
     };
   }, [routeQuery.data]);
 
+  const mapProps = hasCoordinates
+    ? {
+        ambulanceCoordinates: ambulanceCoordinates!,
+        hospitalCoordinates: hospitalCoordinates!,
+        pickupCoordinates: pickupCoordinates!,
+        route: routeQuery.data ?? null,
+        ambulanceDetails: {
+          code: trip.assignedAmbulance?.ambulanceCode ?? "Unknown",
+          driverName: trip.assignedAmbulance?.driverName,
+        },
+        hospitalDetails: {
+          name: trip.assignedHospital?.name ?? "Hospital",
+        },
+        patientDetails: {
+          name: trip.patientName,
+          phone: trip.patientPhone,
+        },
+        onFullscreenToggle: () => setIsFullscreen((v) => !v),
+      }
+    : null;
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
-              <MapPin className="size-5" />
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-blue-50 p-2 text-blue-700">
+                <MapPin className="size-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">Trip map</h2>
+                <p className="text-sm text-muted-foreground">
+                  Ambulance, pickup, hospital, and OSRM route overview.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold">Trip map</h2>
-              <p className="text-sm text-muted-foreground">
-                Ambulance, pickup, hospital, and OSRM route overview.
-              </p>
-            </div>
+            {routeSummary ? (
+              <div className="rounded-lg border bg-muted/30 px-3 py-2 text-right text-xs">
+                <p className="font-medium">{routeSummary.distance}</p>
+                <p className="text-muted-foreground">{routeSummary.duration}</p>
+              </div>
+            ) : null}
           </div>
-          {routeSummary ? (
-            <div className="rounded-lg border bg-muted/30 px-3 py-2 text-right text-xs">
-              <p className="font-medium">{routeSummary.distance}</p>
-              <p className="text-muted-foreground">{routeSummary.duration}</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!hasCoordinates ? (
+            <MapState
+              description="The map needs ambulance, pickup, and hospital coordinates before it can render."
+              title="Map coordinates unavailable"
+            />
+          ) : null}
+
+          {hasCoordinates && routeQuery.isError ? (
+            <MapState
+              description={getFriendlyApiErrorMessage(routeQuery.error)}
+              title="Route unavailable"
+              tone="warning"
+            />
+          ) : null}
+
+          {hasCoordinates ? (
+            <div className="overflow-hidden rounded-xl border">
+              <TripMapClient {...mapProps!} fullscreen={false} />
             </div>
           ) : null}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {!hasCoordinates ? (
-          <MapState
-            description="The map needs ambulance, pickup, and hospital coordinates before it can render."
-            title="Map coordinates unavailable"
-          />
-        ) : null}
 
-        {hasCoordinates && routeQuery.isError ? (
-          <MapState
-            description={getFriendlyApiErrorMessage(routeQuery.error)}
-            title="Route unavailable"
-            tone="warning"
-          />
-        ) : null}
+          {hasCoordinates && routeQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">
+              Loading OSRM route...
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
 
-        {hasCoordinates ? (
-          <div className="overflow-hidden rounded-xl border">
-            <TripMapClient
-              ambulanceCoordinates={ambulanceCoordinates}
-              hospitalCoordinates={hospitalCoordinates}
-              pickupCoordinates={pickupCoordinates}
-              route={routeQuery.data ?? null}
-              ambulanceDetails={{
-                code: trip.assignedAmbulance?.ambulanceCode ?? "Unknown",
-                driverName: trip.assignedAmbulance?.driverName,
+      {/* Fullscreen overlay — rendered via a portal so it covers the whole viewport */}
+      {isFullscreen && hasCoordinates
+        ? createPortal(
+            <div
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 9999,
+                background: "#000",
+                display: "flex",
+                flexDirection: "column",
               }}
-              hospitalDetails={{
-                name: trip.assignedHospital?.name ?? "Hospital",
-              }}
-              patientDetails={{
-                name: trip.patientName,
-                phone: trip.patientPhone,
-              }}
-            />
-          </div>
-        ) : null}
+            >
+              {/* Compact top bar */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 12px",
+                  background: "rgba(0,0,0,0.7)",
+                  backdropFilter: "blur(8px)",
+                  color: "#fff",
+                  flexShrink: 0,
+                  zIndex: 10000,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <MapPin size={18} />
+                  <span style={{ fontWeight: 600, fontSize: "14px" }}>Trip map</span>
+                  {routeSummary ? (
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        background: "rgba(255,255,255,0.15)",
+                        borderRadius: "6px",
+                        padding: "2px 8px",
+                        marginLeft: "8px",
+                      }}
+                    >
+                      {routeSummary.distance} · {routeSummary.duration}
+                    </span>
+                  ) : null}
+                </div>
+                <button
+                  onClick={() => setIsFullscreen(false)}
+                  title="Exit fullscreen (Esc)"
+                  style={{
+                    background: "rgba(255,255,255,0.15)",
+                    border: "1px solid rgba(255,255,255,0.3)",
+                    borderRadius: "6px",
+                    color: "#fff",
+                    padding: "4px 12px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" />
+                  </svg>
+                  Exit fullscreen
+                </button>
+              </div>
 
-        {hasCoordinates && routeQuery.isLoading ? (
-          <p className="text-sm text-muted-foreground">
-            Loading OSRM route...
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
+              {/* Map fills the remaining height */}
+              <div style={{ flex: 1, position: "relative" }}>
+                <TripMapClient
+                  {...mapProps!}
+                  fullscreen={true}
+                  onFullscreenToggle={() => setIsFullscreen(false)}
+                />
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 

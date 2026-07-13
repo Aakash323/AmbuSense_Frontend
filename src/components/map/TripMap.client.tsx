@@ -1,7 +1,7 @@
 "use client";
 
 import L, { type LatLngExpression } from "leaflet";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   MapContainer,
   Marker,
@@ -22,6 +22,8 @@ type TripMapClientProps = {
   ambulanceDetails?: { code: string; driverName?: string };
   hospitalDetails?: { name: string };
   patientDetails?: { name: string; phone?: string };
+  /** When true the map fills the fullscreen overlay — just changes container height */
+  fullscreen?: boolean;
 };
 
 type StaticPoint = {
@@ -125,6 +127,152 @@ function FitMapBounds({
   return null;
 }
 
+/**
+ * When `following` is true this component pans the map to the ambulance
+ * position on every coordinate update, keeping the ambulance centred.
+ */
+function FollowAmbulance({
+  coordinates,
+  following,
+}: {
+  coordinates: RouteCoordinates;
+  following: boolean;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!following) return;
+    map.panTo(toLatLng(coordinates), { animate: true, duration: 0.6 });
+  }, [coordinates, following, map]);
+
+  return null;
+}
+
+/**
+ * Custom Leaflet control rendered as a React component placed *inside*
+ * MapContainer. It adds a "locate / follow ambulance" toggle button and
+ * optionally a fullscreen toggle button directly on the map.
+ */
+function MapControls({
+  following,
+  onFollowToggle,
+  onFullscreenToggle,
+  fullscreen,
+}: {
+  following: boolean;
+  onFollowToggle: () => void;
+  onFullscreenToggle: () => void;
+  fullscreen: boolean;
+}) {
+  return (
+    <>
+      {/* Follow-ambulance button */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: "24px",
+          right: "12px",
+          zIndex: 1000,
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+        }}
+      >
+        <button
+          onClick={onFollowToggle}
+          title={following ? "Stop following ambulance" : "Follow ambulance"}
+          style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "8px",
+            border: "2px solid rgba(255,255,255,0.9)",
+            background: following
+              ? "linear-gradient(135deg,#059669,#047857)"
+              : "rgba(255,255,255,0.95)",
+            color: following ? "#fff" : "#374151",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            transition: "all 0.2s ease",
+          }}
+        >
+          {/* Locate / crosshair SVG */}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+          </svg>
+        </button>
+
+        {/* Fullscreen toggle button */}
+        <button
+          onClick={onFullscreenToggle}
+          title={fullscreen ? "Exit fullscreen" : "Fullscreen map"}
+          style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "8px",
+            border: "2px solid rgba(255,255,255,0.9)",
+            background: fullscreen
+              ? "linear-gradient(135deg,#2563eb,#1d4ed8)"
+              : "rgba(255,255,255,0.95)",
+            color: fullscreen ? "#fff" : "#374151",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
+            transition: "all 0.2s ease",
+          }}
+        >
+          {fullscreen ? (
+            /* Minimize icon */
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3" />
+            </svg>
+          ) : (
+            /* Maximize icon */
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function TripMapClient({
   ambulanceCoordinates,
   hospitalCoordinates,
@@ -133,7 +281,11 @@ export default function TripMapClient({
   ambulanceDetails,
   hospitalDetails,
   patientDetails,
-}: TripMapClientProps) {
+  fullscreen = false,
+  onFullscreenToggle,
+}: TripMapClientProps & { onFullscreenToggle?: () => void }) {
+  const [following, setFollowing] = useState(false);
+
   const staticPoints = useMemo<StaticPoint[]>(
     () => [
       {
@@ -163,7 +315,6 @@ export default function TripMapClient({
       hospitalCoordinates,
       ...allRouteCoordinates(route),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     // Only recalculate when the route changes, not when ambulance moves
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [pickupCoordinates, hospitalCoordinates, route],
@@ -184,10 +335,12 @@ export default function TripMapClient({
     }, []);
   }, [staticPoints]);
 
+  const mapHeight = fullscreen ? "100%" : "min(60vh, 500px)";
+
   return (
     <MapContainer
       center={toLatLng(ambulanceCoordinates)}
-      className="h-full min-h-[400px] w-full"
+      style={{ height: mapHeight, width: "100%", minHeight: fullscreen ? "100%" : "400px" }}
       scrollWheelZoom
       zoom={13}
     >
@@ -259,6 +412,17 @@ export default function TripMapClient({
       )}
 
       <FitMapBounds coordinates={boundsCoordinates} />
+
+      {/* Auto-follow the ambulance when enabled */}
+      <FollowAmbulance coordinates={ambulanceCoordinates} following={following} />
+
+      {/* Custom map controls (follow + fullscreen) */}
+      <MapControls
+        following={following}
+        onFollowToggle={() => setFollowing((f) => !f)}
+        onFullscreenToggle={onFullscreenToggle ?? (() => {})}
+        fullscreen={fullscreen}
+      />
     </MapContainer>
   );
 }
