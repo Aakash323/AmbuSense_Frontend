@@ -130,15 +130,29 @@ function FitMapBounds({
 /**
  * When `following` is true this component pans the map to the ambulance
  * position on every coordinate update, keeping the ambulance centred.
+ * Detects user drag/pan events and disables following automatically.
  */
 function FollowAmbulance({
   coordinates,
   following,
+  onUserDrag,
 }: {
   coordinates: RouteCoordinates;
   following: boolean;
+  onUserDrag: () => void;
 }) {
   const map = useMap();
+
+  // Disable following when the user manually drags/pans the map
+  useEffect(() => {
+    const handleDragStart = () => {
+      if (following) onUserDrag();
+    };
+    map.on("dragstart", handleDragStart);
+    return () => {
+      map.off("dragstart", handleDragStart);
+    };
+  }, [map, following, onUserDrag]);
 
   useEffect(() => {
     if (!following) return;
@@ -286,6 +300,14 @@ export default function TripMapClient({
 }: TripMapClientProps & { onFullscreenToggle?: () => void }) {
   const [following, setFollowing] = useState(false);
 
+  // Auto-enable following whenever fullscreen is activated so the ambulance
+  // stays centred in the fullscreen view without the user pressing the button.
+  useEffect(() => {
+    if (fullscreen) {
+      setFollowing(true);
+    }
+  }, [fullscreen]);
+
   const staticPoints = useMemo<StaticPoint[]>(
     () => [
       {
@@ -413,8 +435,12 @@ export default function TripMapClient({
 
       <FitMapBounds coordinates={boundsCoordinates} />
 
-      {/* Auto-follow the ambulance when enabled */}
-      <FollowAmbulance coordinates={ambulanceCoordinates} following={following} />
+      {/* Auto-follow the ambulance when enabled; stop following on manual drag */}
+      <FollowAmbulance
+        coordinates={ambulanceCoordinates}
+        following={following}
+        onUserDrag={() => setFollowing(false)}
+      />
 
       {/* Custom map controls (follow + fullscreen) */}
       <MapControls
